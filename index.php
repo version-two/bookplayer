@@ -16,7 +16,7 @@ if (file_exists('metadata/page.json')) {
         <title><?= $jsonData['title'] ?></title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;300;400&family=Roboto+Mono:wght@100&display=swap"
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;300;400&family=Roboto+Mono:wght@100;200&display=swap"
               rel="stylesheet">
         <style>
             body {
@@ -26,6 +26,12 @@ if (file_exists('metadata/page.json')) {
                 margin           : 0;
                 padding          : 0;
                 height           : 100vh;
+                transition       : all 0.5s ease;
+            }
+
+            body.light-mode {
+                background-color : #ffffff !important;
+                color            : #121212 !important;
             }
 
             .main-container {
@@ -143,13 +149,185 @@ if (file_exists('metadata/page.json')) {
             }
 
             .mp3-description {
+                max-height : 0;
+                transition : max-height 200ms ease-out;
                 margin-top : 0.5em;
                 font-size  : 0.9em;
                 color      : #888;
+                overflow   : hidden;
             }
+
+            .description-opened {
+                max-height : 500px;
+                transition : max-height 200ms ease-in;
+            }
+
+            .settings-icon {
+                position : fixed;
+                top      : 15px;
+                right    : 15px;
+                width    : 50px;
+                height   : 50px;
+                cursor   : pointer;
+                fill     : #ffffff;
+                stroke   : #ffffff;
+            }
+
+            .light-mode .settings-icon {
+                fill   : #000000;
+                stroke : #000000;
+            }
+
+            /* The Modal for dark mode */
+            body .settings-modal {
+                position         : fixed;
+                left             : 0;
+                right            : 0;
+                top              : 0;
+                bottom           : 0;
+                background-color : #2c2c2c;
+                display          : flex;
+                align-items      : center;
+                justify-content  : center;
+            }
+
+            body.light-mode .settings-modal {
+                background-color : rgba(0, 0, 0, 0.4);
+            }
+
+            /* Modal Content */
+            body .settings-modal-content {
+                background-color : #2c2c2c;
+                color            : white;
+                border           : none;
+                border-radius    : 5px;
+                box-shadow       : 0 5px 15px rgba(0, 0, 0, 0.3);
+                width            : 90%;
+                max-width        : 500px;
+                padding          : 40px;
+                text-align       : center;
+            }
+
+            body.light-mode .settings-modal-content {
+                background-color : #f4f4f4;
+                color            : #121212;
+            }
+
+            /* The Close Button */
+            body .close {
+                color       : white;
+                position    : absolute;
+                top         : 20px;
+                right       : 30px;
+                font-size   : 25px;
+                font-weight : bold;
+            }
+
+            body .close:hover,
+            body .close:focus {
+                color           : #999;
+                text-decoration : none;
+                cursor          : pointer;
+            }
+
+            body.light-mode .close {
+                color : #121212;
+            }
+
+            body.light-mode .close:hover,
+            body.light-mode .close:focus {
+                color : #444;
+            }
+
+            /* Settings Toggle Button Styles */
+            button {
+                background-color : #007bff;
+                border           : none;
+                color            : white;
+                text-align       : center;
+                text-decoration  : none;
+                display          : inline-block;
+                font-size        : 16px;
+                margin           : 10px 2px;
+                cursor           : pointer;
+                padding          : 12px 24px;
+                border-radius    : 5px;
+                transition       : background 0.3s ease;
+            }
+
+            button:hover {
+                background : #0056b3;
+            }
+
+            /* Volume Control Slider Styles */
+            input[type=range] {
+                width         : 100%;
+                height        : 25px;
+                background    : #333;
+                outline       : none;
+                opacity       : 0.7;
+                transition    : opacity .2s;
+                border-radius : 5px;
+            }
+
+            input[type=range]:hover {
+                opacity : 1;
+            }
+
+            input[type=range]::-webkit-slider-thumb {
+                -webkit-appearance : none;
+                appearance         : none;
+                width              : 25px;
+                height             : 25px;
+                background         : #007bff;
+                cursor             : pointer;
+                border-radius      : 50%;
+            }
+
+            input[type=range]::-webkit-slider-thumb:hover {
+                background : #0056b3;
+            }
+
+            input[type=range]::-moz-range-thumb {
+                width         : 25px;
+                height        : 25px;
+                background    : #007bff;
+                cursor        : pointer;
+                border-radius : 50%;
+            }
+
         </style>
     </head>
     <body>
+    <div class="settings-modal" id="settingsModal" style="display: none;">
+        <div class="settings-modal-content">
+            <span class="close">&times;</span>
+
+            <h2>Settings</h2>
+            <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+
+            <label for="volumeControl">Volume control:</label>
+            <input type="range" min="0" max="100" value="100" class="slider" id="volumeControl">
+        </div>
+    </div>
+
+    <svg class="settings-icon" id="settings-icon" version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
+         enable-background="new 0 0 512 512"
+         onclick="window.openModal()">
+        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+        <g id="SVGRepo_iconCarrier">
+            <g>
+                <line fill="none" y1="501" x1="303.1" y2="501" x2="302.1"></line>
+                <g>
+                    <path d="m501,300.8v-91.7h-45.3c-5.3-22.4-14.3-43.3-26.4-62.1l32.9-32.7-64.9-64.6-33.4,33.3c-18.8-11.5-39.6-19.9-61.8-24.8v-47.2h-92.1v48.3c-22,5.4-42.6,14.4-61.1,26.4l-34.2-34-64.9,64.6 35.3,35.2c-2.8,4.6-5.3,9.2-7.7,14-7.5,14.3-13.2,30-17.1,45.7h-49.3v91.7h50.3c1.5,6 3.3,11.9 5.3,17.8 0.1,0.4 0.3,0.8 0.4,1.2 0,0.1 0.1,0.2 0.1,0.4 4.9,14.2 11.3,27.7 19.1,40.2l-35.5,35.3 64.9,64.6 35.1-34.9c18.3,11.5 38.6,20.2 60.2,25.4v48.1h91.1v-47.1c22.7-5 44-13.7 63.1-25.6l32.2,32 64.9-64.6-32.1-31.9c12-19.1 20.9-40.3 26-62.9h44.9zm-94.8,64l29.9,29.8-36.6,36.5-29.5-29.4c-24.7,18.9-54.4,31.7-86.7,36v42.4h-51.3v-42.7c-31.5-4.6-60.4-17.2-84.6-35.7l-31.6,31.5-36.6-36.5 32.4-31.3c-17.9-24-30-52.4-34.4-83.4h-45.3v-51.1h44l1.5-3.6c4.7-29.7 16.5-57.1 33.6-80.3l-32-31.9 36.6-36.5 31,31.9c24-18.5 52.8-31.2 84.1-36v-42.7h51.3v42.3c32,4.1 61.3,16.4 86,34.8l30.3-30.1 35.6,36.5-29.6,29.5c18.2,23.8 30.7,52.2 35.5,83.1h45.4v51.1h-44.7c-3.9,31.8-16.1,61.1-34.3,85.8z"></path>
+                    <path d="m257,143.4c-61.8,0-113.1,50-113.1,112.6s51.4,112.6 113.1,112.6 113.1-51.1 113.1-112.6-51.3-112.6-113.1-112.6zm0,204.3c-51.3,0-92.1-40.7-92.1-91.7 0-51.1 41.9-91.7 92.1-91.7s92.1,40.7 92.1,91.7c0.1,51.1-41.8,91.7-92.1,91.7z"></path>
+                </g>
+            </g>
+        </g>
+    </svg>
+
+
     <div class="main-container">
         <?php if (isset($jsonData['title'])): ?>
             <h1 class="page-title"><?= $jsonData['title'] ?></h1>
@@ -239,10 +417,9 @@ if (file_exists('metadata/page.json')) {
                 $formattedDuration = sprintf("%02d:%02d", $minutes, $seconds);
 
                 echo '<div class="mp3-item" id="item-' . $hash . '" data-filename="' . $encodedFile . '" data-duration="' . $formattedDuration . '">';
-                echo '<div class="mp3-title">' . $title;
+                echo '<div class="mp3-title" onclick="toggleDescription(\'' . $hash . '\')" >' . $title;
                 if (!is_null($description)) {
                     echo ' <span class="expand-caret" onclick="toggleDescription(\'' . $hash . '\')">&#9660;</span>';
-                    echo '<div class="mp3-description" id="desc-' . $hash . '" style="display:none;">' . htmlspecialchars($description) . '</div>';
                 }
                 echo '</div>';
                 echo '<div class="mp3-controls">';
@@ -250,6 +427,9 @@ if (file_exists('metadata/page.json')) {
                 echo '<div class="progress-bar" onclick="seekAudio(event, \'' . $hash . '\')"><div class="progress-bar-inner"></div></div>';
                 echo '<div class="time-info">00:00 / ' . $formattedDuration . '</div>'; // Use the formatted duration here
                 echo '</div>';
+                if (!is_null($description)) {
+                    echo '<div class="mp3-description" onclick="toggleDescription(\'' . $hash . '\')" id="desc-' . $hash . '">' . htmlspecialchars($description) . '</div>';
+                }
                 echo '<audio preload="metadata" onloadedmetadata="updateTimeInfo(\'' . $hash . '\')" ontimeupdate="updateProgress(\'' . $hash . '\')" id="audio-' . $hash . '"></audio>';
                 echo '</div>';
             }
@@ -264,11 +444,7 @@ if (file_exists('metadata/page.json')) {
 
         function toggleDescription(hash) {
             let descElement = document.getElementById('desc-' + hash);
-            if (descElement.style.display === "none") {
-                descElement.style.display = "block";
-            } else {
-                descElement.style.display = "none";
-            }
+            descElement.classList.toggle('description-opened');
         }
 
         function formatTime(seconds) {
@@ -411,6 +587,56 @@ if (file_exists('metadata/page.json')) {
                     timeElement.textContent = formattedCurrentTime + ' / ' + formattedDuration;
                 }
             }
+        }
+
+        /* The global volume variable */
+        var globalVolume = 1;
+
+        window.openModal = function (event) {
+            const modal = document.getElementById('settingsModal');
+            const modalIcon = document.getElementById('settings-icon');
+
+            modal.style.display = 'flex';
+            modalIcon.style.display = 'none';
+        }
+
+        /* Listener for the settings modal close button */
+        window.onclick = function (event) {
+            const modal = document.getElementById('settingsModal');
+            const modalIcon = document.getElementById('settings-icon');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+                modalIcon.style.display = 'block';
+            }
+        }
+
+        /* Listener for the volume control slider */
+        document.getElementById('volumeControl').addEventListener('input', function (event) {
+            globalVolume = event.target.value / 100; // Convert from [0,100] to [0,1]
+
+            // Apply new volume to all audio elements
+            const audioElements = document.querySelectorAll('audio');
+            for (let i = 0; i < audioElements.length; i++) {
+                audioElements[i].volume = globalVolume;
+            }
+        });
+
+        /* Dark Mode functionality */
+        let darkMode = true;
+
+        /* Listener for the settings modal close button */
+        let modal = document.getElementById('settingsModal');
+        let modalIcon = document.getElementById('settings-icon');
+        let closeButton = modal.getElementsByClassName('close')[0];
+        closeButton.onclick = function () {
+            modal.style.display = 'none';
+            modalIcon.style.display = 'block';
+        }
+
+        /* Dark Mode functionality */
+        function toggleDarkMode() {
+            const body = document.body;
+            body.classList.toggle('light-mode');
         }
 
         // Call the function when page loads
