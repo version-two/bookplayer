@@ -411,6 +411,9 @@ if (file_exists('metadata/page.json')) {
         <?php if (isset($jsonData['subtitle'])): ?>
             <p class="page-subtitle"><?= $jsonData['subtitle'] ?></p>
         <?php endif; ?>
+        <div style="text-align: center">
+            <button id="playResumeButton" onclick="playOrResume()">Play</button>
+        </div>
         <div class="mp3-container">
             <?php
 
@@ -560,6 +563,9 @@ if (file_exists('metadata/page.json')) {
                 audioElement.src = decodeURIComponent(encodedFilename);
             }
 
+            localStorage.setItem('lastPlayed', hash);
+            updatePlayResumeButton();
+
             // Fetch progress and set currentTime from localStorage
             if (localStorage.getItem(hash + '-time')) {
                 let progress = document.querySelector('#item-' + hash + ' .progress-bar-inner');
@@ -638,8 +644,37 @@ if (file_exists('metadata/page.json')) {
             }
         }
 
+        function playOrResume() {
+            const lastPlayedHash = localStorage.getItem('lastPlayed');
+            if (lastPlayedHash) {
+                playAudio(lastPlayedHash);
+            } else {
+                // Find the first MP3 item and play it
+                const firstItemHash = document.querySelector('.mp3-item').id.replace('item-', '');
+                playAudio(firstItemHash);
+            }
+        }
+
+        function updatePlayResumeButton() {
+            const lastPlayedHash = localStorage.getItem('lastPlayed');
+            const button = document.getElementById('playResumeButton');
+            if (lastPlayedHash) {
+                const lastAudioElement = document.getElementById('audio-' + lastPlayedHash);
+                // if (lastAudioElement && !lastAudioElement.paused) {
+                //     button.textContent = 'Resume';
+                // } else {
+                //     button.textContent = 'Play from beginning';
+                // }
+                button.textContent = 'Resume';
+            } else {
+                button.textContent = 'Play from beginning';
+            }
+            // Disable the button if there are no MP3 files
+            button.disabled = document.querySelectorAll('.mp3-item').length === 0;
+        }
+
         function updateTimeInfo(hash) {
-            console.log("updateTimeInfo", hash);
+            //console.log("updateTimeInfo", hash);
             let audioElement = document.getElementById('audio-' + hash);
             let timeInfo = document.querySelector('#item-' + hash + ' .time-info');
             if (audioElement && timeInfo) {
@@ -655,7 +690,7 @@ if (file_exists('metadata/page.json')) {
         }
 
         function updateProgress(hash) {
-            console.log("updateProgress", hash);
+            //console.log("updateProgress", hash);
             let audioElement = document.getElementById('audio-' + hash);
             let progress = document.querySelector('#item-' + hash + ' .progress-bar-inner');
             if (audioElement && progress) {
@@ -800,6 +835,7 @@ if (file_exists('metadata/page.json')) {
             restoreProgressAndTime();
             restoreVolumeSetting();
             restoreListenedToFiles();
+            updatePlayResumeButton();
         };
     </script>
     </body>
