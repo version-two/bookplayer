@@ -340,7 +340,7 @@ if (file_exists('metadata/page.json')) {
             .mp3-item .mark-listened,
             .mp3-item .mark-not-listened {
                 position         : absolute;
-                top              : 0;
+                top              : 10px;
                 right            : 10px;
                 border           : none;
                 background-color : transparent;
@@ -355,17 +355,10 @@ if (file_exists('metadata/page.json')) {
                 width            : 28px;
             }
 
-            .mp3-item .mark-not-listened {
-                top : 10px;
-            }
-
-
             .mp3-item .mark-listened:hover,
             .mp3-item .mark-not-listened:hover {
                 opacity : 1;
             }
-
-
         </style>
     </head>
     <body>
