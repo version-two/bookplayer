@@ -102,6 +102,7 @@ if (file_exists('metadata/page.json')) {
 
             .mp3-title {
                 margin-bottom : 5px;
+                max-width     : 90%;
             }
 
             .light-mode .mp3-title {
@@ -168,6 +169,12 @@ if (file_exists('metadata/page.json')) {
 
                 .time-info {
                     text-align : center;
+                }
+
+                .settings-icon {
+                    width  : 25px !important;
+                    height : 25px !important;
+                    top    : 28px !important
                 }
             }
 
@@ -489,11 +496,11 @@ if (file_exists('metadata/page.json')) {
                       <button title="Mark as not listened to" class="mark-not-listened" onclick="markAsNotListened(\'' . $hash . '\')" style="display:none;"><i class="fa-regular fa-file-audio"></i></button>';
                 echo '<div class="mp3-title" onclick="toggleDescription(\'' . $hash . '\')" >' . $title;
                 if (!is_null($description)) {
-                    echo ' <span class="expand-caret caret-' . $hash . '" onclick="toggleDescription(\'' . $hash . '\')">&#9660;</span>';
+                    echo '&nbsp;<span class="expand-caret caret-' . $hash . '">&#9660;</span>';
                 }
                 echo '</div>';
                 echo '<div class="mp3-controls">';
-                echo '<button onclick="playAudio(\'' . $hash . '\')">Play</button>';
+                echo '<button class="play-button" onclick="playAudio(\'' . $hash . '\')">Play</button>';
                 echo '<div class="progress-bar" onclick="seekAudio(event, \'' . $hash . '\')"><div class="progress-bar-inner"></div></div>';
                 echo '<div class="time-info">00:00 / ' . $formattedDuration . '</div>'; // Use the formatted duration here
                 echo '</div>';
@@ -532,7 +539,7 @@ if (file_exists('metadata/page.json')) {
             let itemElement = document.getElementById('item-' + hash);
             let encodedFilename = itemElement.dataset.filename;
             let audioElement = document.getElementById('audio-' + hash);
-            let playButton = itemElement.querySelector('button');
+            let playButton = itemElement.querySelector('button.play-button');
 
             // Error handling for missing elements
             if (!itemElement) {
@@ -574,6 +581,14 @@ if (file_exists('metadata/page.json')) {
                 }
             }
 
+            audioElement.addEventListener('ended', function () {
+                // Mark the current track as listened to
+                markAsListened(hash);
+
+                // Automatically start playing the next track
+                playNextTrack(hash);
+            });
+
             // Add listener for 'canplaythrough' event
             audioElement.addEventListener('canplaythrough', function () {
                 updateTimeInfo(hash);
@@ -611,6 +626,16 @@ if (file_exists('metadata/page.json')) {
             // Update the currentAudio and currentButton
             currentAudio = audioElement;
             currentButton = playButton;
+        }
+
+        function playNextTrack(currentHash) {
+            let nextItemElement = document.getElementById('item-' + currentHash).nextElementSibling;
+
+            // If there's a next item, play it
+            if (nextItemElement && nextItemElement.classList.contains('mp3-item')) {
+                let nextHash = nextItemElement.id.replace('item-', '');
+                playAudio(nextHash);
+            }
         }
 
         function updateTimeInfo(hash) {
@@ -732,12 +757,14 @@ if (file_exists('metadata/page.json')) {
 
         function markAsListened(hash) {
             let itemElement = document.getElementById('item-' + hash);
-            itemElement.classList.add('listened');
-            document.querySelector('#item-' + hash + ' .mark-listened').style.display = 'none';
-            document.querySelector('#item-' + hash + ' .mark-not-listened').style.display = 'block';
+            if (!itemElement.classList.contains('listened')) {
+                itemElement.classList.add('listened');
+                document.querySelector('#item-' + hash + ' .mark-listened').style.display = 'none';
+                document.querySelector('#item-' + hash + ' .mark-not-listened').style.display = 'block';
 
-            // Store in localStorage
-            localStorage.setItem(hash + '-listened', true);
+                // Store in localStorage
+                localStorage.setItem(hash + '-listened', true);
+            }
         }
 
         function markAsNotListened(hash) {
