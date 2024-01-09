@@ -93,6 +93,7 @@ if (file_exists('metadata/page.json')) {
                 border-radius    : 5px;
                 margin-bottom    : 15px;
                 transition       : all 0.3s ease;
+                min-width        : 600px;
             }
 
             .mp3-item:hover {
@@ -148,6 +149,11 @@ if (file_exists('metadata/page.json')) {
 
                 .mp3-container {
                     border-radius : 0;
+                }
+
+                .mp3-item {
+                    min-width : 200px;
+                    max-width : 100vw;
                 }
 
                 .mp3-controls {
