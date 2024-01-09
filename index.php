@@ -12,7 +12,7 @@ if (file_exists('metadata/page.json')) {
     <html lang="<?= $jsonData['lang'] ?>">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
         <title><?= $jsonData['title'] ?></title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,6 +30,7 @@ if (file_exists('metadata/page.json')) {
                 padding          : 0;
                 height           : 100vh;
                 transition       : all 0.5s ease;
+                max-width        : 100vw;
             }
 
             body.light-mode {
@@ -70,8 +71,8 @@ if (file_exists('metadata/page.json')) {
             }
 
             .mp3-container {
-                width            : 95%;
-                max-width        : 600px;
+                /*width            : 95%;*/
+                max-width        : min(600px, 100vw);
                 background-color : #1e1e1e;
                 border-radius    : 10px;
                 padding          : 20px;
@@ -182,7 +183,7 @@ if (file_exists('metadata/page.json')) {
             }
 
             .settings-icon {
-                position : fixed;
+                position : absolute;
                 top      : 15px;
                 right    : 15px;
                 width    : 50px;
@@ -323,7 +324,7 @@ if (file_exists('metadata/page.json')) {
             <span class="close">&times;</span>
 
             <h2>Settings</h2>
-            <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+            <!--            <button onclick="toggleDarkMode()">Toggle Dark Mode</button>-->
 
             <label for="volumeControl">Volume control:</label>
             <input type="range" min="0" max="100" value="100" class="slider" id="volumeControl">
@@ -509,6 +510,19 @@ if (file_exists('metadata/page.json')) {
                 audioElement.currentTime = localStorage.getItem(hash + '-time');
             }
 
+            // Pause all other tracks
+            const audioElements = document.querySelectorAll('audio');
+            for (let otherAudio of audioElements) {
+                if (otherAudio !== audioElement) {
+                    otherAudio.pause();
+                    // Also reset the play button text of other tracks, if necessary
+                    let otherButton = otherAudio.parentElement.querySelector('button');
+                    if (otherButton) {
+                        otherButton.textContent = 'Play';
+                    }
+                }
+            }
+
             // Add listener for 'canplaythrough' event
             audioElement.addEventListener('canplaythrough', function () {
                 updateTimeInfo(hash);
@@ -631,13 +645,28 @@ if (file_exists('metadata/page.json')) {
         /* Listener for the volume control slider */
         document.getElementById('volumeControl').addEventListener('input', function (event) {
             globalVolume = event.target.value / 100; // Convert from [0,100] to [0,1]
-
             // Apply new volume to all audio elements
             const audioElements = document.querySelectorAll('audio');
             for (let i = 0; i < audioElements.length; i++) {
                 audioElements[i].volume = globalVolume;
             }
+            // Save the volume setting to localStorage
+            localStorage.setItem('globalVolume', globalVolume);
         });
+
+        function restoreVolumeSetting() {
+            // Check if a saved volume setting exists in localStorage
+            if (localStorage.getItem('globalVolume')) {
+                globalVolume = parseFloat(localStorage.getItem('globalVolume'));
+                // Update the volume slider UI
+                document.getElementById('volumeControl').value = globalVolume * 100;
+                // Apply the volume setting to all audio elements
+                const audioElements = document.querySelectorAll('audio');
+                for (let audio of audioElements) {
+                    audio.volume = globalVolume;
+                }
+            }
+        }
 
         /* Dark Mode functionality */
         let darkMode = true;
@@ -658,7 +687,10 @@ if (file_exists('metadata/page.json')) {
         }
 
         // Call the function when page loads
-        window.onload = restoreProgressAndTime;
+        window.onload = function () {
+            restoreProgressAndTime();
+            restoreVolumeSetting();
+        };
     </script>
     </body>
     </html>
