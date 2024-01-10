@@ -1,46 +1,19 @@
 <?php
-
-if (!is_dir('.metadata')) {
-    mkdir('.metadata');
-
-    initMetaDataFolder();
-    initPageJson();
-}
-
-$settings = [
-    'lang'      => 'en',
-    'languages' => ['en' => 'English', 'sk' => "Slovenčina"],
-    'title'     => 'BookPlayer',
-    'subtitle'  => 'by <a href="https://v2.sk/" target="_blank" title="Version Two - versiontwo.sk - Websites, mobile apps, custom systems ...">v2.sk</a>',
+$jsonData = [
+    'lang'     => 'sk',
+    'title'    => 'Book player',
+    'subtitle' => null,
 ];
-
-if (file_exists('.metadata/page.json')) {
-    $settings = array_merge($settings, json_decode(file_get_contents('.metadata/page.json'), true));
+if (file_exists('metadata/page.json')) {
+    $jsonData = json_decode(file_get_contents('metadata/page.json'), true);
 }
-if (!file_exists('.metadata/lang/en.json')) {
-    file_put_contents('.metadata/lang/en.json', json_encode(["settings_title" => "Settings", "language_title" => "Language:", "speed_title" => "Speed:", "volume_control_label" => "Volume control:", "speed_label" => "Speed: ", "reset_button" => "Reset", "play" => "Play", "stop" => "Stop", "pause" => "Pause", "play_resume_button_text_beginning" => "Play from beginning", "resume_playback_button_text" => "Resume playback", "mark_as_listened_tooltip" => "Mark as listened to", "mark_as_not_listened_tooltip" => "Mark as not listened to", "play_audio_error" => "Required elements not found for:", "no_mp3_items_error" => "No MP3 items found on the page", "playback_error" => "Error attempting to play audio:",]), true);
-}
-if (!file_exists('.metadata/lang/sk.json')) {
-    file_put_contents('.metadata/lang/sk.json', json_encode(["settings_title" => "Nastavenia", "language_title" => "Jazyk:", "speed_title" => "Rýchlosť:", "volume_control_label" => "Ovládanie hlasitosti:", "speed_label" => "Rýchlosť prehrávania: ", "reset_button" => "Reset", "play" => "Prehrať", "stop" => "Zastaviť", "pause" => "Pauza", "play_resume_button_text_beginning" => "Prehrať od začiatku", "resume_playback_button_text" => "Pokračovať v prehrávaní", "mark_as_listened_tooltip" => "Označiť ako vypočuté", "mark_as_not_listened_tooltip" => "Označiť ako nevypočuté", "play_audio_error" => "Požadované prvky neboli nájdené pre:", "no_mp3_items_error" => "Na stránke neboli nájdené žiadne MP3 položky", "playback_error" => "Chyba pri pokuse o prehranie zvuku:"]), true);
-}
-$language = $_COOKIE['lang'] ?? $settings['lang'];
-
-if (!array_key_exists($language, $settings['languages'])) {
-    $language = 'en';
-}
-
-$translationLines = json_decode(file_get_contents('.metadata/lang/' . $language . '.json'), true);
-
-$files = glob("*.mp3");
-natsort($files);
-$fileCount = count($files);
 ?>
     <!DOCTYPE html>
-    <html lang="<?= $language ?>">
+    <html lang="<?= $jsonData['lang'] ?>">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-        <title><?= $settings['title'] ?></title>
+        <title><?= $jsonData['title'] ?></title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;300;400&family=Roboto+Mono:wght@100;200&display=swap"
@@ -65,8 +38,6 @@ $fileCount = count($files);
                 height           : 100vh;
                 transition       : all 0.5s ease;
                 max-width        : 100vw;
-                max-height       : 100vh;
-                overflow         : hidden;
             }
 
             body.light-mode {
@@ -75,16 +46,11 @@ $fileCount = count($files);
             }
 
             .main-container {
-                display        : flex;
-                flex-direction : column;
-                align-items    : center;
-                height         : 100%;
-                overflow       : auto;
-                padding        : 20px;
-            }
-
-            .center-content {
+                display         : flex;
+                flex-direction  : column;
                 justify-content : center;
+                align-items     : center;
+                height          : 100%;
             }
 
             .page-title {
@@ -127,7 +93,6 @@ $fileCount = count($files);
                 border-radius    : 5px;
                 margin-bottom    : 15px;
                 transition       : all 0.3s ease;
-                min-width        : 600px;
             }
 
             .mp3-item:hover {
@@ -136,7 +101,6 @@ $fileCount = count($files);
 
             .mp3-title {
                 margin-bottom : 5px;
-                max-width     : 90%;
             }
 
             .light-mode .mp3-title {
@@ -172,7 +136,6 @@ $fileCount = count($files);
             }
 
             .progress-bar-inner {
-                transition       : all 200ms ease-in;
                 height           : 10px;
                 background-color : #007bff;
                 width            : 0;
@@ -187,11 +150,6 @@ $fileCount = count($files);
                     border-radius : 0;
                 }
 
-                .mp3-item {
-                    min-width : 200px;
-                    max-width : 100vw;
-                }
-
                 .mp3-controls {
                     flex-direction : column;
                     align-items    : stretch;
@@ -204,38 +162,6 @@ $fileCount = count($files);
 
                 .time-info {
                     text-align : center;
-                }
-
-                .settings-icon {
-                    width  : 25px !important;
-                    height : 25px !important;
-                    top    : 28px !important
-                }
-
-                #playResumeButton {
-                    position        : fixed;
-                    bottom          : 20px;
-                    right           : 20px;
-                    width           : 50px;
-                    height          : 50px;
-                    border-radius   : 50%;
-                    font-size       : 20px;
-                    display         : flex;
-                    align-items     : center;
-                    justify-content : center;
-                    padding         : 0;
-                }
-
-                #playResumeButton span {
-                    display : block;
-                }
-
-                #playResumeButton .fa {
-                    margin : 0;
-                }
-
-                #playResumeButton #playResumeText {
-                    display : none;
                 }
             }
 
@@ -275,6 +201,11 @@ $fileCount = count($files);
                 stroke   : #ffffff;
             }
 
+            .light-mode .settings-icon {
+                fill   : #000000;
+                stroke : #000000;
+            }
+
             /* The Modal for dark mode */
             body .settings-modal {
                 position         : fixed;
@@ -286,7 +217,6 @@ $fileCount = count($files);
                 display          : flex;
                 align-items      : center;
                 justify-content  : center;
-                z-index          : 1;
             }
 
             body.light-mode .settings-modal {
@@ -326,6 +256,15 @@ $fileCount = count($files);
                 color           : #999;
                 text-decoration : none;
                 cursor          : pointer;
+            }
+
+            body.light-mode .close {
+                color : #121212;
+            }
+
+            body.light-mode .close:hover,
+            body.light-mode .close:focus {
+                color : #444;
             }
 
             /* Settings Toggle Button Styles */
@@ -420,48 +359,6 @@ $fileCount = count($files);
             .mp3-item .mark-not-listened:hover {
                 opacity : 1;
             }
-
-            .speed-control-container {
-                display         : flex;
-                align-items     : center;
-                justify-content : space-between;
-                margin-bottom   : 10px;
-            }
-
-            .speed-control-container label {
-                margin-right : 10px;
-            }
-
-            .slider-and-button {
-                display         : flex;
-                align-items     : center;
-                justify-content : space-between;
-                width           : 100%;
-            }
-
-            #speedSlider {
-                flex-grow    : 1;
-                margin-right : 5%;
-            }
-
-            #resetSpeedButton {
-                width     : 25%;
-                padding   : 5px;
-                font-size : 0.8em;
-            }
-
-            .language-selection {
-                margin-top : 10px;
-            }
-
-            .language-selection label {
-                margin-right : 5px;
-            }
-
-            #languageSelect {
-                padding   : 5px;
-                font-size : 1em;
-            }
         </style>
     </head>
     <body>
@@ -469,28 +366,11 @@ $fileCount = count($files);
         <div class="settings-modal-content">
             <span class="close">&times;</span>
 
-            <h2><?= $translationLines['settings_title']; ?></h2>
-            <label for="volumeControl"><?= $translationLines['volume_control_label']; ?></label>
+            <h2>Settings</h2>
+            <!--            <button onclick="toggleDarkMode()">Toggle Dark Mode</button>-->
+
+            <label for="volumeControl">Volume control:</label>
             <input type="range" min="0" max="100" value="100" class="slider" id="volumeControl">
-            <br>
-            <label for="speedSlider"><?= $translationLines['speed_title']; ?> </label>
-            <div class="speed-control-container">
-                <div class="slider-and-button">
-                    <input type="range" id="speedSlider" min="0.25" max="2" step="0.05" value="1" style="width: 70%;">
-                    <button id="resetSpeedButton" style="width: 25%;"><?= $translationLines['reset_button']; ?></button>
-                </div>
-            </div>
-            <br>
-            <div class="language-selection">
-                <label for="languageSelect"><?= $translationLines['language_title']; ?>:</label>
-                <select id="languageSelect" onchange="changeLanguage(this.value)">
-                    <?php
-                    foreach ($settings['languages'] as $newLang => $newLangTitle) {
-                        echo '<option value="' . $newLang . '" ' . ($newLang == $language ? 'selected' : '') . '>' . $newLangTitle . '</option>';
-                    }
-                    ?>
-                </select>
-            </div>
         </div>
     </div>
 
@@ -510,21 +390,14 @@ $fileCount = count($files);
     </svg>
 
 
-    <div class="main-container <?= $fileCount > 4 ? '' : 'center-content' ?>">
-        <?php if (isset($settings['title'])): ?>
-            <h1 class="page-title"><?= $settings['title'] ?></h1>
+    <div class="main-container">
+        <?php if (isset($jsonData['title'])): ?>
+            <h1 class="page-title"><?= $jsonData['title'] ?></h1>
         <?php endif; ?>
 
-        <?php if (isset($settings['subtitle'])): ?>
-            <p class="page-subtitle"><?= $settings['subtitle'] ?></p>
+        <?php if (isset($jsonData['subtitle'])): ?>
+            <p class="page-subtitle"><?= $jsonData['subtitle'] ?></p>
         <?php endif; ?>
-        <div style="text-align: center">
-            <button id="playResumeButton" onclick="playOrResume()">
-                <span id="playResumeIcon" class="fa fa-play"></span>
-                <span id="playResumeText"><?= $translationLines['play']; ?></span>
-            </button>
-
-        </div>
         <div class="mp3-container">
             <?php
 
@@ -539,20 +412,13 @@ $fileCount = count($files);
                 return md5_file($filename);
             }
 
-            function initPageJson()
-            {
-                file_put_contents('.metadata' . DIRECTORY_SEPARATOR . 'page.json', '{"lang": "en","title": "BookPlayer","subtitle": "by <a href=\"https://v2.sk/\" target="_blank" title="Version Two - versiontwo.sk - Websites, mobile apps, custom systems ...">v2.sk</a>"}');
-            }
-
-            function initMetaDataFolder()
-            {
-                file_put_contents('.metadata' . DIRECTORY_SEPARATOR . '.htaccess', 'Options -MultiViews -Indexes');
-            }
-
             function getMP3Details($filename)
             {
+                if (!is_dir('metadata')) {
+                    mkdir('metadata');
+                }
                 $hash         = getMD5Hash($filename);
-                $jsonFilename = '.metadata/' . pathinfo($filename, PATHINFO_FILENAME) . '.json';
+                $jsonFilename = 'metadata/' . pathinfo($filename, PATHINFO_FILENAME) . '.json';
                 $fileSize     = filesize($filename);
 
                 if (file_exists($jsonFilename)) {
@@ -595,6 +461,8 @@ $fileCount = count($files);
                 return $newJsonData;
             }
 
+            $files = glob("*.mp3");
+            natsort($files);
             foreach ($files as $file) {
                 $encodedFile  = rawurlencode($file);
                 $fileJsonData = getMP3Details($file); // Get details including duration
@@ -611,22 +479,22 @@ $fileCount = count($files);
                 $formattedDuration = sprintf("%02d:%02d", $minutes, $seconds);
 
                 echo '<div class="mp3-item" id="item-' . $hash . '" data-filename="' . $encodedFile . '" data-duration="' . $formattedDuration . '">';
-                echo '<button title="' . $translationLines['mark_as_listened_tooltip'] . '" class="mark-listened" onclick="markAsListened(\'' . $hash . '\')"><i class="fa-solid fa-file-audio"></i></button>
-                      <button title="' . $translationLines['mark_as_not_listened_tooltip'] . '" class="mark-not-listened" onclick="markAsNotListened(\'' . $hash . '\')" style="display:none;"><i class="fa-regular fa-file-audio"></i></button>';
+                echo '<button title="Mark as listened to" class="mark-listened" onclick="markAsListened(\'' . $hash . '\')"><i class="fa-solid fa-file-audio"></i></button>
+                      <button title="Mark as not listened to" class="mark-not-listened" onclick="markAsNotListened(\'' . $hash . '\')" style="display:none;"><i class="fa-regular fa-file-audio"></i></button>';
                 echo '<div class="mp3-title" onclick="toggleDescription(\'' . $hash . '\')" >' . $title;
                 if (!is_null($description)) {
-                    echo '&nbsp;<span class="expand-caret caret-' . $hash . '">&#9660;</span>';
+                    echo ' <span class="expand-caret caret-' . $hash . '" onclick="toggleDescription(\'' . $hash . '\')">&#9660;</span>';
                 }
                 echo '</div>';
                 echo '<div class="mp3-controls">';
-                echo '<button id="play-' . $hash . '" class="play-button" onclick="playAudio(\'' . $hash . '\')">' . $translationLines['play'] . '</button>';
+                echo '<button onclick="playAudio(\'' . $hash . '\')">Play</button>';
                 echo '<div class="progress-bar" onclick="seekAudio(event, \'' . $hash . '\')"><div class="progress-bar-inner"></div></div>';
                 echo '<div class="time-info">00:00 / ' . $formattedDuration . '</div>'; // Use the formatted duration here
                 echo '</div>';
                 if (!is_null($description)) {
                     echo '<div class="mp3-description" onclick="toggleDescription(\'' . $hash . '\')" id="desc-' . $hash . '">' . htmlspecialchars($description) . '</div>';
                 }
-                echo '<audio preload="metadata" onloadedmetadata="updateTimeInfo(\'' . $hash . '\')" ontimeupdate="updateProgress(\'' . $hash . '\')" id="audio-' . $hash . '" data-hash="' . $hash . '"></audio>';
+                echo '<audio preload="metadata" onloadedmetadata="updateTimeInfo(\'' . $hash . '\')" ontimeupdate="updateProgress(\'' . $hash . '\')" id="audio-' . $hash . '"></audio>';
                 echo '</div>';
             }
 
@@ -635,11 +503,8 @@ $fileCount = count($files);
     </div>
 
     <script>
-        let currentSpeed = 1;
         let currentAudio = null;
         let currentButton = null;
-        let currentlyPlaying = false;
-        let currentHash = '';
 
         function toggleDescription(hash) {
             let descElement = document.getElementById('desc-' + hash);
@@ -657,17 +522,23 @@ $fileCount = count($files);
         }
 
         function playAudio(hash) {
-            currentlyPlaying = true;
-            currentHash = hash;
             // Selecting elements based on the passed hash
             let itemElement = document.getElementById('item-' + hash);
             let encodedFilename = itemElement.dataset.filename;
             let audioElement = document.getElementById('audio-' + hash);
-            let playButton = document.getElementById('play-' + hash);
+            let playButton = itemElement.querySelector('button');
 
             // Error handling for missing elements
-            if (!itemElement || !audioElement || !playButton) {
-                console.error('<?= $translationLines['play_audio_error'];?>', encodedFilename);
+            if (!itemElement) {
+                console.error('Item element not found for:', encodedFilename);
+                return;
+            }
+            if (!audioElement) {
+                console.error('Audio element not found for:', encodedFilename);
+                return;
+            }
+            if (!playButton) {
+                console.error('Play button not found for:', encodedFilename);
                 return;
             }
 
@@ -675,9 +546,6 @@ $fileCount = count($files);
             if (!audioElement.src) {
                 audioElement.src = decodeURIComponent(encodedFilename);
             }
-
-            // Update localStorage and button
-            localStorage.setItem('lastPlayed', hash);
 
             // Fetch progress and set currentTime from localStorage
             if (localStorage.getItem(hash + '-time')) {
@@ -689,162 +557,58 @@ $fileCount = count($files);
 
             // Pause all other tracks
             const audioElements = document.querySelectorAll('audio');
-            audioElements.forEach(otherAudio => {
+            for (let otherAudio of audioElements) {
                 if (otherAudio !== audioElement) {
-                    let audioHash = otherAudio.dataset.hash;
-                    stopAudio(audioHash);
-                    let otherButton = otherAudio.parentElement.querySelector('button.play-button');
-                    if (otherButton) otherButton.textContent = '<?= $translationLines['play'];?>';
+                    otherAudio.pause();
+                    // Also reset the play button text of other tracks, if necessary
+                    let otherButton = otherAudio.parentElement.querySelector('button');
+                    if (otherButton) {
+                        otherButton.textContent = 'Play';
+                    }
                 }
-            });
+            }
 
-            // Handle play/pause logic
+            // Add listener for 'canplaythrough' event
+            audioElement.addEventListener('canplaythrough', function () {
+                updateTimeInfo(hash);
+                updateProgress(hash);
+            }, false);
+
+            // Check if there's currentAudio and it's not the current audioElement
+            if (currentAudio && currentAudio !== audioElement) {
+                currentAudio.pause();
+                if (currentButton) {
+                    currentButton.textContent = 'Play';
+                }
+            }
+
+            // Check if audio is paused and play or pause accordingly
             if (audioElement.paused) {
-                const playPromise = audioElement.play();
-                audioElement.playbackRate = currentSpeed;
-
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        // Playback started successfully
-                        playButton.textContent = '<?= $translationLines['stop'];?>';
-                        // Set a new interval to update the time
-                        window.timeUpdateInterval = setInterval(() => {
-                            let progress = (audioElement.currentTime / audioElement.duration) * 100;
-
-                            updateTimeInfo(hash);
-                            updateProgress(hash);
-                            localStorage.setItem(hash + '-time', audioElement.currentTime);
-                            localStorage.setItem(hash + '-progress', (audioElement.currentTime / audioElement.duration) * 100);
-
-                            if (progress === 100) {
-                                clearInterval(window.timeUpdateInterval);
-                                stopAudio(hash);
-                                playNextTrack(hash);
-                            }
-                        }, 1000);
-                    }).catch(error => {
-                        console.error('<?= $translationLines['playback_error'];?>', error);
-                    });
-                }
+                audioElement.play();
+                playButton.textContent = 'Stop';
+                // Clear any existing intervals
+                if (window.timeUpdateInterval) clearInterval(window.timeUpdateInterval);
+                // Set a new interval to update the time and save current time to localStorage
+                window.timeUpdateInterval = setInterval(function () {
+                    updateTimeInfo(hash);
+                    updateProgress(hash);
+                    localStorage.setItem(hash + '-time', audioElement.currentTime);
+                    localStorage.setItem(hash + '-progress', (audioElement.currentTime / audioElement.duration) * 100);
+                }, 1000);
             } else {
                 audioElement.pause();
-                playButton.textContent = '<?= $translationLines['play'];?>';
+                playButton.textContent = 'Play';
+                // Clear the interval when audio is paused
                 if (window.timeUpdateInterval) clearInterval(window.timeUpdateInterval);
             }
 
-            updatePlayResumeButton();
-        }
-
-        function stopAudio(hash) {
-            currentlyPlaying = false;
-            let audioElement = document.getElementById('audio-' + hash);
-            let playButton = document.getElementById('play-' + hash);
-
-            audioElement.pause();
-            playButton.textContent = '<?= $translationLines['play'];?>';
-        }
-
-        function playFirstTrack() {
-            const firstItemHash = document.querySelector('.mp3-item')?.id.replace('item-', '');
-            if (firstItemHash) {
-                playAudio(firstItemHash);
-            } else {
-                console.error("<?= $translationLines['no_mp3_items_error'];?>");
-            }
-        }
-
-        function playNextTrack(currentHash) {
-            markAsListened(currentHash);
-            let nextItemElement = document.getElementById('item-' + currentHash).nextElementSibling;
-
-            // If there's a next item, play it
-            if (nextItemElement && nextItemElement.classList.contains('mp3-item')) {
-                let nextHash = nextItemElement.id.replace('item-', '');
-                playAudio(nextHash);
-            }
-        }
-
-        function playOrResume() {
-            let lastPlayedHash = localStorage.getItem('lastPlayed');
-            if (currentlyPlaying) {
-                lastPlayedHash = currentHash;
-            }
-            if (lastPlayedHash) {
-                const lastAudioElement = document.getElementById('audio-' + lastPlayedHash);
-                if (lastAudioElement) {
-                    if (lastAudioElement.paused) {
-                        playAudio(lastPlayedHash);
-                        updatePlayResumeButton();
-                    } else {
-                        stopAudio(lastPlayedHash)
-                        updatePlayResumeButton(lastPlayedHash); // Update the button immediately
-                    }
-                } else {
-                    playFirstTrack();
-                }
-            } else {
-                playFirstTrack();
-            }
-            updatePlayResumeButtonIcon();
-        }
-
-        function updatePlayResumeButton(hash = null) {
-            let lastPlayedHash = localStorage.getItem('lastPlayed');
-            if (hash !== null) {
-                lastPlayedHash = hash;
-            }
-
-            let buttonText = '<?= $translationLines['play_resume_button_text_beginning']; ?>';
-            if (lastPlayedHash) {
-                const lastAudioElement = document.getElementById('audio-' + lastPlayedHash);
-                if (lastAudioElement) {
-                    if (!lastAudioElement.paused && !lastAudioElement.ended) {
-                        // If currently playing
-                        buttonText = '<?= $translationLines['pause']; ?>';
-                    } else if (lastAudioElement.paused && lastAudioElement.currentTime > 0 && !lastAudioElement.ended) {
-                        // If paused, has progress, and not ended
-                        buttonText = '<?= $translationLines['resume_playback_button_text']; ?>';
-                    }
-                } else {
-                    // If lastPlayedHash exists but corresponding audio element not found
-                    buttonText = '<?= $translationLines['play_resume_button_text_beginning']; ?>';
-                }
-            }
-
-            // Update the text content of the playResumeText span
-            document.getElementById('playResumeText').textContent = buttonText;
-
-            // Disable the button if there are no MP3 files
-            document.getElementById('playResumeButton').disabled = document.querySelectorAll('.mp3-item').length === 0;
-
-            // Update the icon of the play/resume button
-            updatePlayResumeButtonIcon();
-        }
-
-        function updatePlayResumeButtonIcon() {
-            const lastPlayedHash = localStorage.getItem('lastPlayed');
-            const playResumeIcon = document.getElementById('playResumeIcon');
-            const playButton = document.getElementById('play-' + lastPlayedHash);
-            const audioElement = lastPlayedHash ? document.getElementById('audio-' + lastPlayedHash) : null;
-
-            if (audioElement && !audioElement.paused && !audioElement.ended) {
-                // Change to pause icon if the audio is playing
-                playResumeIcon.classList.remove('fa-play');
-                playResumeIcon.classList.add('fa-stop');
-            } else {
-                // Change to play icon if the audio is not playing
-                playResumeIcon.classList.remove('fa-stop');
-                playResumeIcon.classList.add('fa-play');
-            }
-
-            // Additionally, you might want to handle the case when the audio has ended
-            if (audioElement && audioElement.ended) {
-                playResumeIcon.classList.remove('fa-stop');
-                playResumeIcon.classList.add('fa-play');
-            }
+            // Update the currentAudio and currentButton
+            currentAudio = audioElement;
+            currentButton = playButton;
         }
 
         function updateTimeInfo(hash) {
+            console.log("updateTimeInfo", hash);
             let audioElement = document.getElementById('audio-' + hash);
             let timeInfo = document.querySelector('#item-' + hash + ' .time-info');
             if (audioElement && timeInfo) {
@@ -860,23 +624,13 @@ $fileCount = count($files);
         }
 
         function updateProgress(hash) {
-            //console.log("updateProgress", hash);
+            console.log("updateProgress", hash);
             let audioElement = document.getElementById('audio-' + hash);
             let progress = document.querySelector('#item-' + hash + ' .progress-bar-inner');
             if (audioElement && progress) {
                 let percentage = (Math.floor(audioElement.currentTime) / Math.floor(audioElement.duration)) * 100;
                 progress.style.width = percentage + '%';
             }
-        }
-
-        function updateAudioSpeed(speed) {
-            speed = parseFloat(speed);
-            currentSpeed = speed;
-            //console.log('Updating speed to:' + speed.toString());
-            const audioElements = document.querySelectorAll('audio');
-            audioElements.forEach(audio => {
-                audio.playbackRate = speed;
-            });
         }
 
         function seekAudio(event, hash) {
@@ -945,20 +699,6 @@ $fileCount = count($files);
             localStorage.setItem('globalVolume', globalVolume);
         });
 
-        // Event listener for speed slider
-        document.getElementById('speedSlider').addEventListener('input', function () {
-            const selectedSpeed = parseFloat(this.value);
-            updateAudioSpeed(selectedSpeed);
-            localStorage.setItem('globalPlaybackSpeed', selectedSpeed.toString());
-        });
-
-        // Event listener for reset speed button
-        document.getElementById('resetSpeedButton').addEventListener('click', function () {
-            updateAudioSpeed(1);
-            document.getElementById('speedSlider').value = 1;
-            localStorage.setItem('globalPlaybackSpeed', 1);
-        });
-
         function restoreVolumeSetting() {
             // Check if a saved volume setting exists in localStorage
             if (localStorage.getItem('globalVolume')) {
@@ -984,23 +724,14 @@ $fileCount = count($files);
             }
         }
 
-        // Function to restore the speed setting from localStorage
-        function restoreSpeedSetting() {
-            const savedSpeed = parseFloat(localStorage.getItem('globalPlaybackSpeed')) || 1;
-            updateAudioSpeed(savedSpeed);
-            document.getElementById('speedSlider').value = savedSpeed;
-        }
-
         function markAsListened(hash) {
             let itemElement = document.getElementById('item-' + hash);
-            if (!itemElement.classList.contains('listened')) {
-                itemElement.classList.add('listened');
-                document.querySelector('#item-' + hash + ' .mark-listened').style.display = 'none';
-                document.querySelector('#item-' + hash + ' .mark-not-listened').style.display = 'block';
+            itemElement.classList.add('listened');
+            document.querySelector('#item-' + hash + ' .mark-listened').style.display = 'none';
+            document.querySelector('#item-' + hash + ' .mark-not-listened').style.display = 'block';
 
-                // Store in localStorage
-                localStorage.setItem(hash + '-listened', true);
-            }
+            // Store in localStorage
+            localStorage.setItem(hash + '-listened', true);
         }
 
         function markAsNotListened(hash) {
@@ -1031,25 +762,11 @@ $fileCount = count($files);
             body.classList.toggle('light-mode');
         }
 
-        function changeLanguage(lang) {
-            let expiryDate = new Date();
-            expiryDate.setFullYear(expiryDate.getFullYear() + 10); // Set the expiration to 10 years from now
-            document.cookie = "lang=" + lang + ";expires=" + expiryDate.toUTCString() + ";path=/";
-            location.reload();
-        }
-
         // Call the function when page loads
         window.onload = function () {
             restoreProgressAndTime();
             restoreVolumeSetting();
             restoreListenedToFiles();
-            updatePlayResumeButton();
-            restoreSpeedSetting();
-            updatePlayResumeButtonIcon();
-        };
-
-        window.onresize = function () {
-            updatePlayResumeButtonIcon();
         };
     </script>
     </body>
