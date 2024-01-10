@@ -483,7 +483,7 @@ $fileCount = count($files);
             <br>
             <div class="language-selection">
                 <label for="languageSelect"><?= $translationLines['language_title']; ?>:</label>
-                <select id="languageSelect" onchange="changeLanguage(this.value)">
+                <select id="languageSelect" onchange="audioPlayer.changeLanguage(this.value)">
                     <?php
                     foreach ($settings['languages'] as $newLang => $newLangTitle) {
                         echo '<option value="' . $newLang . '" ' . ($newLang == $language ? 'selected' : '') . '>' . $newLangTitle . '</option>';
@@ -519,7 +519,7 @@ $fileCount = count($files);
             <p class="page-subtitle"><?= $settings['subtitle'] ?></p>
         <?php endif; ?>
         <div style="text-align: center">
-            <button id="playResumeButton" onclick="playOrResume()">
+            <button id="playResumeButton" onclick="audioPlayer.playOrResume()">
                 <span id="playResumeIcon" class="fa fa-play"></span>
                 <span id="playResumeText"><?= $translationLines['play']; ?></span>
             </button>
@@ -611,22 +611,22 @@ $fileCount = count($files);
                 $formattedDuration = sprintf("%02d:%02d", $minutes, $seconds);
 
                 echo '<div class="mp3-item" id="item-' . $hash . '" data-filename="' . $encodedFile . '" data-duration="' . $formattedDuration . '">';
-                echo '<button title="' . $translationLines['mark_as_listened_tooltip'] . '" class="mark-listened" onclick="markAsListened(\'' . $hash . '\')"><i class="fa-solid fa-file-audio"></i></button>
-                      <button title="' . $translationLines['mark_as_not_listened_tooltip'] . '" class="mark-not-listened" onclick="markAsNotListened(\'' . $hash . '\')" style="display:none;"><i class="fa-regular fa-file-audio"></i></button>';
-                echo '<div class="mp3-title" onclick="toggleDescription(\'' . $hash . '\')" >' . $title;
+                echo '<button title="' . $translationLines['mark_as_listened_tooltip'] . '" class="mark-listened" onclick="audioPlayer.markAsListened(\'' . $hash . '\')"><i class="fa-solid fa-file-audio"></i></button>
+                      <button title="' . $translationLines['mark_as_not_listened_tooltip'] . '" class="mark-not-listened" onclick="audioPlayer.markAsNotListened(\'' . $hash . '\')" style="display:none;"><i class="fa-regular fa-file-audio"></i></button>';
+                echo '<div class="mp3-title" onclick="audioPlayer.toggleDescription(\'' . $hash . '\')" >' . $title;
                 if (!is_null($description)) {
                     echo '&nbsp;<span class="expand-caret caret-' . $hash . '">&#9660;</span>';
                 }
                 echo '</div>';
                 echo '<div class="mp3-controls">';
-                echo '<button id="play-' . $hash . '" class="play-button" onclick="playAudio(\'' . $hash . '\')">' . $translationLines['play'] . '</button>';
-                echo '<div class="progress-bar" onclick="seekAudio(event, \'' . $hash . '\')"><div class="progress-bar-inner"></div></div>';
+                echo '<button id="play-' . $hash . '" class="play-button" onclick="audioPlayer.playAudio(\'' . $hash . '\')">' . $translationLines['play'] . '</button>';
+                echo '<div class="progress-bar" onclick="audioPlayer.seekAudio(event, \'' . $hash . '\')"><div class="progress-bar-inner"></div></div>';
                 echo '<div class="time-info">00:00 / ' . $formattedDuration . '</div>'; // Use the formatted duration here
                 echo '</div>';
                 if (!is_null($description)) {
-                    echo '<div class="mp3-description" onclick="toggleDescription(\'' . $hash . '\')" id="desc-' . $hash . '">' . htmlspecialchars($description) . '</div>';
+                    echo '<div class="mp3-description" onclick="audioPlayer.toggleDescription(\'' . $hash . '\')" id="desc-' . $hash . '">' . htmlspecialchars($description) . '</div>';
                 }
-                echo '<audio preload="metadata" onloadedmetadata="updateTimeInfo(\'' . $hash . '\')" ontimeupdate="updateProgress(\'' . $hash . '\')" id="audio-' . $hash . '" data-hash="' . $hash . '"></audio>';
+                echo '<audio preload="metadata" onloadedmetadata="audioPlayer.updateTimeInfo(\'' . $hash . '\')" ontimeupdate="audioPlayer.updateProgress(\'' . $hash . '\')" id="audio-' . $hash . '" data-hash="' . $hash . '"></audio>';
                 echo '</div>';
             }
 
@@ -635,422 +635,441 @@ $fileCount = count($files);
     </div>
 
     <script>
-        let currentSpeed = 1;
-        let currentAudio = null;
-        let currentButton = null;
-        let currentlyPlaying = false;
-        let currentHash = '';
+        class AudioPlayer {
+            constructor() {
+                this.currentSpeed = 1;
+                this.currentAudio = null;
+                this.currentButton = null;
+                this.currentlyPlaying = false;
+                this.currentHash = '';
+                this.globalVolume = 1;
+                this.darkMode = true;
+                this.timeUpdateInterval = null;
 
-        function toggleDescription(hash) {
-            let descElement = document.getElementById('desc-' + hash);
-            descElement.classList.toggle('description-opened');
-        }
-
-        function formatTime(seconds) {
-            let hours = Math.floor(seconds / 3600);
-            let minutes = Math.floor((seconds % 3600) / 60);
-            let secs = Math.floor(seconds % 60);
-            return [hours, minutes, secs]
-                .map(v => v < 10 ? '0' + v : v)
-                .filter((v, i) => v !== '00' || i > 0)
-                .join(':');
-        }
-
-        function playAudio(hash) {
-            currentlyPlaying = true;
-            currentHash = hash;
-            // Selecting elements based on the passed hash
-            let itemElement = document.getElementById('item-' + hash);
-            let encodedFilename = itemElement.dataset.filename;
-            let audioElement = document.getElementById('audio-' + hash);
-            let playButton = document.getElementById('play-' + hash);
-
-            // Error handling for missing elements
-            if (!itemElement || !audioElement || !playButton) {
-                console.error('<?= $translationLines['play_audio_error'];?>', encodedFilename);
-                return;
+                this.initializeEventListeners();
+                this.restoreSettings();
+                this.updatePlayResumeButton();
+                this.updatePlayResumeButtonIcon();
             }
 
-            // Assign file source to the audio element if not already set
-            if (!audioElement.src) {
-                audioElement.src = decodeURIComponent(encodedFilename);
+            initializeEventListeners() {
+                window.onload = () => this.restoreSettings();
+                window.onresize = () => this.updatePlayResumeButtonIcon();
+                document.getElementById('volumeControl').addEventListener('input', this.handleVolumeChange.bind(this));
+                document.getElementById('speedSlider').addEventListener('input', this.handleSpeedChange.bind(this));
+                document.getElementById('resetSpeedButton').addEventListener('click', this.resetSpeed.bind(this));
+                document.getElementById('settingsModal').onclick = this.handleModalClick.bind(this);
+                document.getElementById('settings-icon').onclick = () => this.openModal();
+                document.getElementById('playResumeButton').onclick = () => this.playOrResume();
             }
 
-            // Update localStorage and button
-            localStorage.setItem('lastPlayed', hash);
-
-            // Fetch progress and set currentTime from localStorage
-            if (localStorage.getItem(hash + '-time')) {
-                let progress = document.querySelector('#item-' + hash + ' .progress-bar-inner');
-                let percentage = localStorage.getItem(hash + '-progress');
-                progress.style.width = percentage + '%';
-                audioElement.currentTime = localStorage.getItem(hash + '-time');
+            restoreSettings() {
+                this.restoreProgressAndTime();
+                this.restoreVolumeSetting();
+                this.restoreListenedToFiles();
+                this.restoreSpeedSetting();
+                this.updatePlayResumeButtonIcon();
             }
 
-            // Pause all other tracks
-            const audioElements = document.querySelectorAll('audio');
-            audioElements.forEach(otherAudio => {
-                if (otherAudio !== audioElement) {
-                    let audioHash = otherAudio.dataset.hash;
-                    stopAudio(audioHash);
-                    let otherButton = otherAudio.parentElement.querySelector('button.play-button');
-                    if (otherButton) otherButton.textContent = '<?= $translationLines['play'];?>';
+            playAudio(hash) {
+                let shouldReProgress = true;
+                this.currentlyPlaying = !this.currentlyPlaying;
+                if (this.currentHash === hash) {
+                    shouldReProgress = false;
                 }
-            });
+                this.currentHash = hash;
 
-            // Handle play/pause logic
-            if (audioElement.paused) {
-                const playPromise = audioElement.play();
-                audioElement.playbackRate = currentSpeed;
+                let itemElement = document.getElementById('item-' + hash);
+                let encodedFilename = itemElement.dataset.filename;
+                let audioElement = document.getElementById('audio-' + hash);
+                let playButton = document.getElementById('play-' + hash);
 
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        // Playback started successfully
-                        playButton.textContent = '<?= $translationLines['stop'];?>';
-                        // Set a new interval to update the time
-                        window.timeUpdateInterval = setInterval(() => {
-                            let progress = (audioElement.currentTime / audioElement.duration) * 100;
-
-                            updateTimeInfo(hash);
-                            updateProgress(hash);
-                            localStorage.setItem(hash + '-time', audioElement.currentTime);
-                            localStorage.setItem(hash + '-progress', (audioElement.currentTime / audioElement.duration) * 100);
-
-                            if (progress === 100) {
-                                clearInterval(window.timeUpdateInterval);
-                                stopAudio(hash);
-                                playNextTrack(hash);
-                            }
-                        }, 1000);
-                    }).catch(error => {
-                        console.error('<?= $translationLines['playback_error'];?>', error);
-                    });
+                if (!itemElement || !audioElement || !playButton) {
+                    console.error('<?= $translationLines['play_audio_error'];?>', encodedFilename);
+                    return;
                 }
-            } else {
-                audioElement.pause();
-                playButton.textContent = '<?= $translationLines['play'];?>';
-                if (window.timeUpdateInterval) clearInterval(window.timeUpdateInterval);
+
+                if (!audioElement.src) {
+                    audioElement.src = decodeURIComponent(encodedFilename);
+                }
+
+                if (shouldReProgress) {
+                    localStorage.setItem('lastPlayed', hash);
+                    this.setProgressFromLocalStorage(hash, audioElement);
+                    this.pauseAllOtherAudios(audioElement);
+                }
+
+                if (audioElement.paused) {
+                    let startFromBeginning = false;
+                    if (audioElement.dataset.progress !== null && audioElement.dataset.progress == 100) {
+                        startFromBeginning = true;
+                    }
+
+                    const playPromise = audioElement.play();
+                    audioElement.playbackRate = this.currentSpeed;
+                    if (startFromBeginning) {
+                        audioElement.currentTime = 0;
+                    }
+
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            // Playback started successfully
+                            playButton.textContent = '<?= $translationLines['stop'];?>';
+                            // Set a new interval to update the time
+                            this.timeUpdateInterval = setInterval(() => {
+                                let progress = (audioElement.currentTime / audioElement.duration) * 100;
+
+                                this.updateTimeInfo(hash);
+                                this.updateProgress(hash);
+
+                                if (progress === 100) {
+                                    clearInterval(this.timeUpdateInterval);
+                                    this.stopAudio(hash);
+                                    this.playNextTrack(hash);
+                                }
+                            }, 1000);
+                        }).catch(error => {
+                            console.error('<?= $translationLines['playback_error'];?>', error);
+                        });
+                    }
+                } else {
+                    audioElement.pause();
+                    playButton.textContent = '<?= $translationLines['play'];?>';
+                    if (this.timeUpdateInterval) clearInterval(this.timeUpdateInterval);
+                }
+
+                this.updatePlayResumeButton(hash);
+                this.updatePlayResumeButtonIcon();
             }
 
-            updatePlayResumeButton();
-        }
+            stopAudio(hash) {
+                this.currentlyPlaying = false;
+                clearInterval(this.timeUpdateInterval);
+                const audioElement = document.getElementById('audio-' + hash);
+                const playButton = document.getElementById('play-' + hash);
 
-        function stopAudio(hash) {
-            currentlyPlaying = false;
-            let audioElement = document.getElementById('audio-' + hash);
-            let playButton = document.getElementById('play-' + hash);
-
-            audioElement.pause();
-            playButton.textContent = '<?= $translationLines['play'];?>';
-        }
-
-        function playFirstTrack() {
-            const firstItemHash = document.querySelector('.mp3-item')?.id.replace('item-', '');
-            if (firstItemHash) {
-                playAudio(firstItemHash);
-            } else {
-                console.error("<?= $translationLines['no_mp3_items_error'];?>");
+                if (audioElement) {
+                    audioElement.pause();
+                    playButton.textContent = '<?= $translationLines['play'];?>';
+                }
             }
-        }
 
-        function playNextTrack(currentHash) {
-            markAsListened(currentHash);
-            let nextItemElement = document.getElementById('item-' + currentHash).nextElementSibling;
+            playNextTrack(currentHash) {
+                this.markAsListened(currentHash);
+                let nextItemElement = document.getElementById('item-' + currentHash).nextElementSibling;
 
-            // If there's a next item, play it
-            if (nextItemElement && nextItemElement.classList.contains('mp3-item')) {
-                let nextHash = nextItemElement.id.replace('item-', '');
-                playAudio(nextHash);
+                if (nextItemElement && nextItemElement.classList.contains('mp3-item')) {
+                    let nextHash = nextItemElement.id.replace('item-', '');
+                    this.playAudio(nextHash);
+                }
             }
-        }
 
-        function playOrResume() {
-            let lastPlayedHash = localStorage.getItem('lastPlayed');
-            if (currentlyPlaying) {
-                lastPlayedHash = currentHash;
-            }
-            if (lastPlayedHash) {
-                const lastAudioElement = document.getElementById('audio-' + lastPlayedHash);
-                if (lastAudioElement) {
-                    if (lastAudioElement.paused) {
-                        playAudio(lastPlayedHash);
-                        updatePlayResumeButton();
+            playOrResume() {
+                let lastPlayedHash = localStorage.getItem('lastPlayed');
+                if (this.currentlyPlaying) {
+                    lastPlayedHash = this.currentHash;
+                }
+
+                if (lastPlayedHash) {
+                    const lastAudioElement = document.getElementById('audio-' + lastPlayedHash);
+                    if (lastAudioElement) {
+                        if (lastAudioElement.paused) {
+                            this.playAudio(lastPlayedHash);
+                        } else {
+                            this.stopAudio(lastPlayedHash);
+                        }
                     } else {
-                        stopAudio(lastPlayedHash)
-                        updatePlayResumeButton(lastPlayedHash); // Update the button immediately
+                        this.playFirstTrack();
                     }
                 } else {
-                    playFirstTrack();
+                    this.playFirstTrack();
                 }
-            } else {
-                playFirstTrack();
-            }
-            updatePlayResumeButtonIcon();
-        }
-
-        function updatePlayResumeButton(hash = null) {
-            let lastPlayedHash = localStorage.getItem('lastPlayed');
-            if (hash !== null) {
-                lastPlayedHash = hash;
+                this.updatePlayResumeButtonIcon(lastPlayedHash);
             }
 
-            let buttonText = '<?= $translationLines['play_resume_button_text_beginning']; ?>';
-            if (lastPlayedHash) {
-                const lastAudioElement = document.getElementById('audio-' + lastPlayedHash);
-                if (lastAudioElement) {
-                    if (!lastAudioElement.paused && !lastAudioElement.ended) {
-                        // If currently playing
-                        buttonText = '<?= $translationLines['pause']; ?>';
-                    } else if (lastAudioElement.paused && lastAudioElement.currentTime > 0 && !lastAudioElement.ended) {
-                        // If paused, has progress, and not ended
-                        buttonText = '<?= $translationLines['resume_playback_button_text']; ?>';
+            updatePlayResumeButton(hash = null) {
+                let lastPlayedHash = hash;
+                if (lastPlayedHash === null) {
+                    lastPlayedHash = localStorage.getItem('lastPlayed');
+                }
+                const button = document.getElementById('playResumeButton');
+                const buttonTextSpan = document.getElementById('playResumeText');
+                let buttonText = '<?= $translationLines['play_resume_button_text_beginning']; ?>';
+
+                if (lastPlayedHash) {
+                    const lastAudioElement = document.getElementById('audio-' + lastPlayedHash);
+                    if (lastAudioElement) {
+                        if (!lastAudioElement.paused && !lastAudioElement.ended) {
+                            // If currently playing
+                            buttonText = '<?= $translationLines['pause']; ?>';
+                        } else if (lastAudioElement.paused && lastAudioElement.currentTime > 0 && !lastAudioElement.ended) {
+                            // If paused, has progress, and not ended
+                            buttonText = '<?= $translationLines['resume_playback_button_text']; ?>';
+                        }
+                    } else {
+                        // If lastPlayedHash exists but corresponding audio element not found
+                        buttonText = '<?= $translationLines['play_resume_button_text_beginning']; ?>';
                     }
+                }
+
+                // Update the text content of the playResumeText span
+                buttonTextSpan.textContent = buttonText;
+
+                // Disable the button if there are no MP3 files
+                button.disabled = document.querySelectorAll('.mp3-item').length === 0;
+
+                // Update the icon of the play/resume button
+                this.updatePlayResumeButtonIcon();
+            }
+
+            updatePlayResumeButtonIcon(hash = null) {
+                let lastPlayedHash = hash;
+                if (lastPlayedHash === null) {
+                    lastPlayedHash = localStorage.getItem('lastPlayed');
+                }
+                const playResumeIcon = document.getElementById('playResumeIcon');
+                const audioElement = lastPlayedHash ? document.getElementById('audio-' + lastPlayedHash) : null;
+
+                if (audioElement && !audioElement.paused && !audioElement.ended) {
+                    // Change to pause icon if the audio is playing
+                    playResumeIcon.classList.remove('fa-play');
+                    playResumeIcon.classList.add('fa-stop');
                 } else {
-                    // If lastPlayedHash exists but corresponding audio element not found
-                    buttonText = '<?= $translationLines['play_resume_button_text_beginning']; ?>';
+                    // Change to play icon if the audio is not playing
+                    playResumeIcon.classList.remove('fa-stop');
+                    playResumeIcon.classList.add('fa-play');
+                }
+
+                if (audioElement && audioElement.ended) {
+                    playResumeIcon.classList.remove('fa-stop');
+                    playResumeIcon.classList.add('fa-play');
                 }
             }
 
-            // Update the text content of the playResumeText span
-            document.getElementById('playResumeText').textContent = buttonText;
-
-            // Disable the button if there are no MP3 files
-            document.getElementById('playResumeButton').disabled = document.querySelectorAll('.mp3-item').length === 0;
-
-            // Update the icon of the play/resume button
-            updatePlayResumeButtonIcon();
-        }
-
-        function updatePlayResumeButtonIcon() {
-            const lastPlayedHash = localStorage.getItem('lastPlayed');
-            const playResumeIcon = document.getElementById('playResumeIcon');
-            const playButton = document.getElementById('play-' + lastPlayedHash);
-            const audioElement = lastPlayedHash ? document.getElementById('audio-' + lastPlayedHash) : null;
-
-            if (audioElement && !audioElement.paused && !audioElement.ended) {
-                // Change to pause icon if the audio is playing
-                playResumeIcon.classList.remove('fa-play');
-                playResumeIcon.classList.add('fa-stop');
-            } else {
-                // Change to play icon if the audio is not playing
-                playResumeIcon.classList.remove('fa-stop');
-                playResumeIcon.classList.add('fa-play');
-            }
-
-            // Additionally, you might want to handle the case when the audio has ended
-            if (audioElement && audioElement.ended) {
-                playResumeIcon.classList.remove('fa-stop');
-                playResumeIcon.classList.add('fa-play');
-            }
-        }
-
-        function updateTimeInfo(hash) {
-            let audioElement = document.getElementById('audio-' + hash);
-            let timeInfo = document.querySelector('#item-' + hash + ' .time-info');
-            if (audioElement && timeInfo) {
-                let duration = formatTime(Math.floor(audioElement.duration));
-                let currentTime = formatTime(Math.floor(audioElement.currentTime));
-                timeInfo.textContent = currentTime + ' / ' + duration;
-            }
-
-            if (audioElement && timeInfo) {
-                localStorage[hash + '-progress'] = (Math.floor(audioElement.currentTime) / Math.floor(audioElement.duration)) * 100;
-                localStorage[hash + '-time'] = Math.floor(audioElement.currentTime);
-            }
-        }
-
-        function updateProgress(hash) {
-            //console.log("updateProgress", hash);
-            let audioElement = document.getElementById('audio-' + hash);
-            let progress = document.querySelector('#item-' + hash + ' .progress-bar-inner');
-            if (audioElement && progress) {
-                let percentage = (Math.floor(audioElement.currentTime) / Math.floor(audioElement.duration)) * 100;
-                progress.style.width = percentage + '%';
-            }
-        }
-
-        function updateAudioSpeed(speed) {
-            speed = parseFloat(speed);
-            currentSpeed = speed;
-            //console.log('Updating speed to:' + speed.toString());
-            const audioElements = document.querySelectorAll('audio');
-            audioElements.forEach(audio => {
-                audio.playbackRate = speed;
-            });
-        }
-
-        function seekAudio(event, hash) {
-            let audioElement = document.querySelector('#item-' + hash + ' audio');
-            let progressContainer = document.querySelector('#item-' + hash + ' .progress-bar');
-
-            if (!audioElement || audioElement.readyState < 4) return;
-
-            const rect = progressContainer.getBoundingClientRect();
-            const percent = (event.clientX - rect.left) / rect.width;
-            audioElement.currentTime = percent * audioElement.duration;
-
-            // Manually call updateTimeInfo and updateProgress
-            updateTimeInfo(hash);
-            updateProgress(hash);
-        }
-
-        function restoreProgressAndTime() {
-            let items = document.getElementsByClassName('mp3-item');
-            for (let i = 0; i < items.length; i++) {
-                let item = items[i];
-                let hash = item.id.replace('item-', '');
-                if (localStorage.getItem(hash + '-time')) {
-                    let progressElement = document.querySelector('#item-' + hash + ' .progress-bar-inner');
-                    let timeElement = document.querySelector('#item-' + hash + ' .time-info');
-                    let formattedDuration = item.dataset.duration;
-                    let percentage = localStorage.getItem(hash + '-progress');
-                    let currentTime = localStorage.getItem(hash + '-time');
-                    progressElement.style.width = percentage + '%';
-                    let formattedCurrentTime = formatTime(currentTime);
-                    timeElement.textContent = formattedCurrentTime + ' / ' + formattedDuration;
-                }
-            }
-        }
-
-        /* The global volume variable */
-        let globalVolume = 1;
-
-        window.openModal = function (event) {
-            const modal = document.getElementById('settingsModal');
-            const modalIcon = document.getElementById('settings-icon');
-
-            modal.style.display = 'flex';
-            modalIcon.style.display = 'none';
-        }
-
-        /* Listener for the settings modal close button */
-        window.onclick = function (event) {
-            const modal = document.getElementById('settingsModal');
-            const modalIcon = document.getElementById('settings-icon');
-            if (event.target === modal) {
-                modal.style.display = 'none';
-                modalIcon.style.display = 'block';
-            }
-        }
-
-        /* Listener for the volume control slider */
-        document.getElementById('volumeControl').addEventListener('input', function (event) {
-            globalVolume = event.target.value / 100; // Convert from [0,100] to [0,1]
-            // Apply new volume to all audio elements
-            const audioElements = document.querySelectorAll('audio');
-            for (let i = 0; i < audioElements.length; i++) {
-                audioElements[i].volume = globalVolume;
-            }
-            // Save the volume setting to localStorage
-            localStorage.setItem('globalVolume', globalVolume);
-        });
-
-        // Event listener for speed slider
-        document.getElementById('speedSlider').addEventListener('input', function () {
-            const selectedSpeed = parseFloat(this.value);
-            updateAudioSpeed(selectedSpeed);
-            localStorage.setItem('globalPlaybackSpeed', selectedSpeed.toString());
-        });
-
-        // Event listener for reset speed button
-        document.getElementById('resetSpeedButton').addEventListener('click', function () {
-            updateAudioSpeed(1);
-            document.getElementById('speedSlider').value = 1;
-            localStorage.setItem('globalPlaybackSpeed', 1);
-        });
-
-        function restoreVolumeSetting() {
-            // Check if a saved volume setting exists in localStorage
-            if (localStorage.getItem('globalVolume')) {
-                globalVolume = parseFloat(localStorage.getItem('globalVolume'));
-                // Update the volume slider UI
-                document.getElementById('volumeControl').value = globalVolume * 100;
-                // Apply the volume setting to all audio elements
+            handleVolumeChange(event) {
+                this.globalVolume = event.target.value / 100;
                 const audioElements = document.querySelectorAll('audio');
-                for (let audio of audioElements) {
-                    audio.volume = globalVolume;
+                audioElements.forEach(audio => {
+                    audio.volume = this.globalVolume;
+                });
+                localStorage.setItem('globalVolume', this.globalVolume);
+            }
+
+            handleSpeedChange(event) {
+                const speed = parseFloat(event.target.value);
+                this.updateAudioSpeed(speed);
+                localStorage.setItem('globalPlaybackSpeed', speed);
+            }
+
+            resetSpeed() {
+                this.updateAudioSpeed(1);
+                document.getElementById('speedSlider').value = 1;
+                localStorage.setItem('globalPlaybackSpeed', '1');
+            }
+
+            updateAudioSpeed(speed) {
+                const audioElements = document.querySelectorAll('audio');
+                audioElements.forEach(audio => {
+                    audio.playbackRate = speed;
+                });
+                this.currentSpeed = speed;
+            }
+
+            restoreVolumeSetting() {
+                const savedVolume = parseFloat(localStorage.getItem('globalVolume')) || 1;
+                this.globalVolume = savedVolume;
+                document.getElementById('volumeControl').value = savedVolume * 100;
+                this.handleVolumeChange({target: {value: savedVolume * 100}});
+            }
+
+            restoreListenedToFiles() {
+                const items = document.getElementsByClassName('mp3-item');
+                Array.from(items).forEach(item => {
+                    const hash = item.id.replace('item-', '');
+                    if (localStorage.getItem(hash + '-listened')) {
+                        this.markAsListened(hash);
+                    }
+                });
+            }
+
+            restoreSpeedSetting() {
+                const savedSpeed = parseFloat(localStorage.getItem('globalPlaybackSpeed')) || 1;
+                this.updateAudioSpeed(savedSpeed);
+                document.getElementById('speedSlider').value = savedSpeed;
+            }
+
+            restoreProgressAndTime() {
+                let items = document.getElementsByClassName('mp3-item');
+                for (let i = 0; i < items.length; i++) {
+                    let item = items[i];
+                    let hash = item.id.replace('item-', '');
+                    if (localStorage.getItem(hash + '-time')) {
+                        let audioElement = document.querySelector('#item-' + hash + ' .progress-bar-inner');
+                        let progressElement = document.querySelector('#item-' + hash + ' .progress-bar-inner');
+                        let timeElement = document.querySelector('#item-' + hash + ' .time-info');
+                        let formattedDuration = item.dataset.duration;
+                        let percentage = localStorage.getItem(hash + '-progress');
+                        let currentTime = localStorage.getItem(hash + '-time');
+                        progressElement.style.width = percentage + '%';
+                        let formattedCurrentTime = this.formatTime(currentTime);
+                        timeElement.textContent = formattedCurrentTime + ' / ' + formattedDuration;
+
+                        audioElement.dataset.progress = percentage;
+                    }
                 }
             }
-        }
 
-        function restoreListenedToFiles() {
-            let items = document.getElementsByClassName('mp3-item');
-            for (let i = 0; i < items.length; i++) {
-                let item = items[i];
-                let hash = item.id.replace('item-', '');
-                if (localStorage.getItem(hash + '-listened')) {
-                    markAsListened(hash);
+
+            openModal() {
+                document.getElementById('settingsModal').style.display = 'flex';
+                document.getElementById('settings-icon').style.display = 'none';
+            }
+
+            handleModalClick(event) {
+                const modal = document.getElementById('settingsModal');
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                    document.getElementById('settings-icon').style.display = 'block';
                 }
             }
-        }
 
-        // Function to restore the speed setting from localStorage
-        function restoreSpeedSetting() {
-            const savedSpeed = parseFloat(localStorage.getItem('globalPlaybackSpeed')) || 1;
-            updateAudioSpeed(savedSpeed);
-            document.getElementById('speedSlider').value = savedSpeed;
-        }
+            setProgressFromLocalStorage(hash, audioElement) {
+                const progressElement = document.querySelector('#item-' + hash + ' .progress-bar-inner');
 
-        function markAsListened(hash) {
-            let itemElement = document.getElementById('item-' + hash);
-            if (!itemElement.classList.contains('listened')) {
-                itemElement.classList.add('listened');
-                document.querySelector('#item-' + hash + ' .mark-listened').style.display = 'none';
-                document.querySelector('#item-' + hash + ' .mark-not-listened').style.display = 'block';
-
-                // Store in localStorage
-                localStorage.setItem(hash + '-listened', true);
+                if (localStorage.getItem(hash + '-time')) {
+                    const percentage = localStorage.getItem(hash + '-progress');
+                    progressElement.style.width = percentage + '%';
+                    audioElement.currentTime = localStorage.getItem(hash + '-time');
+                }
             }
+
+            pauseAllOtherAudios(currentHash) {
+                const audioElements = document.querySelectorAll('audio');
+                audioElements.forEach(audio => {
+                    if (audio.dataset.hash !== currentHash) {
+                        let audioHash = audio.dataset.hash;
+                        this.stopAudio(audioHash);
+                        const playButton = audio.parentElement.querySelector('button.play-button');
+                        if (playButton) playButton.textContent = '<?= $translationLines['play']; ?>';
+                    }
+                });
+            }
+
+            startProgressInterval(hash) {
+                const audioElement = document.getElementById('audio-' + hash);
+                this.timeUpdateInterval = setInterval(() => {
+                    let progress = (audioElement.currentTime / audioElement.duration) * 100;
+
+                    this.updateTimeInfo(hash);
+                    this.updateProgress(hash);
+
+                    localStorage.setItem(hash + '-time', audioElement.currentTime);
+                    localStorage.setItem(hash + '-progress', (audioElement.currentTime / audioElement.duration) * 100);
+
+                    if (progress === 100) {
+                        clearInterval(this.timeUpdateInterval);
+                        this.stopAudio(hash);
+                        this.playNextTrack(hash);
+                    }
+                }, 1000);
+            }
+
+            markAsListened(hash) {
+                let itemElement = document.getElementById('item-' + hash);
+                if (itemElement && !itemElement.classList.contains('listened')) {
+                    itemElement.classList.add('listened');
+                    document.querySelector('#item-' + hash + ' .mark-listened').style.display = 'none';
+                    document.querySelector('#item-' + hash + ' .mark-not-listened').style.display = 'block';
+                    localStorage.setItem(hash + '-listened', true);
+                }
+            }
+
+            markAsNotListened(hash) {
+                let itemElement = document.getElementById('item-' + hash);
+                if (itemElement && itemElement.classList.contains('listened')) {
+                    itemElement.classList.remove('listened');
+                    document.querySelector('#item-' + hash + ' .mark-listened').style.display = 'block';
+                    document.querySelector('#item-' + hash + ' .mark-not-listened').style.display = 'none';
+                    localStorage.removeItem(hash + '-listened');
+                }
+            }
+
+            playFirstTrack() {
+                const firstItemHash = document.querySelector('.mp3-item')?.id.replace('item-', '');
+                if (firstItemHash) {
+                    playAudio(firstItemHash);
+                } else {
+                    console.error("<?= $translationLines['no_mp3_items_error'];?>");
+                }
+            }
+
+            changeLanguage(lang) {
+                const expiryDate = new Date();
+                expiryDate.setFullYear(expiryDate.getFullYear() + 10); // Set the expiration to 10 years from now
+                document.cookie = "lang=" + lang + ";expires=" + expiryDate.toUTCString() + ";path=/";
+                location.reload();
+            }
+
+            updateTimeInfo(hash) {
+                const audioElement = document.getElementById('audio-' + hash);
+                const timeInfo = document.querySelector('#item-' + hash + ' .time-info');
+
+                if (audioElement && timeInfo) {
+                    const duration = this.formatTime(Math.floor(audioElement.duration));
+                    const currentTime = this.formatTime(Math.floor(audioElement.currentTime));
+                    timeInfo.textContent = currentTime + ' / ' + duration;
+
+                    localStorage[hash + '-progress'] = (Math.floor(audioElement.currentTime) / Math.floor(audioElement.duration)) * 100;
+                    localStorage[hash + '-time'] = Math.floor(audioElement.currentTime);
+                }
+            }
+
+            updateProgress(hash) {
+                const audioElement = document.getElementById('audio-' + hash);
+                const progress = document.querySelector('#item-' + hash + ' .progress-bar-inner');
+
+                if (audioElement && progress) {
+                    const percentage = (audioElement.currentTime / audioElement.duration) * 100;
+                    progress.style.width = percentage + '%';
+                }
+            }
+
+            formatTime(seconds) {
+                let hours = Math.floor(seconds / 3600);
+                let minutes = Math.floor((seconds % 3600) / 60);
+                let secs = Math.floor(seconds % 60);
+                return [hours, minutes, secs]
+                    .map(v => v < 10 ? '0' + v : v)
+                    .filter((v, i) => v !== '00' || i > 0)
+                    .join(':');
+            }
+
+            toggleDescription(hash) {
+                let descElement = document.getElementById('desc-' + hash);
+                if (descElement) {
+                    descElement.classList.toggle('description-opened');
+                }
+            }
+
+            seekAudio(event, hash) {
+                let audioElement = document.getElementById('audio-' + hash);
+                let progressContainer = document.querySelector('#item-' + hash + ' .progress-bar');
+
+                if (!audioElement || audioElement.readyState < 4) return;
+
+                const rect = progressContainer.getBoundingClientRect();
+                const percent = (event.clientX - rect.left) / rect.width;
+                audioElement.currentTime = percent * audioElement.duration;
+
+                this.updateTimeInfo(hash);
+                this.updateProgress(hash);
+            }
+
+            // Additional methods like toggleDarkMode, changeLanguage, etc.
         }
 
-        function markAsNotListened(hash) {
-            let itemElement = document.getElementById('item-' + hash);
-            itemElement.classList.remove('listened');
-            document.querySelector('#item-' + hash + ' .mark-listened').style.display = 'block';
-            document.querySelector('#item-' + hash + ' .mark-not-listened').style.display = 'none';
+        const audioPlayer = new AudioPlayer();
 
-            // Remove from localStorage
-            localStorage.removeItem(hash + '-listened');
-        }
-
-        /* Dark Mode functionality */
-        let darkMode = true;
-
-        /* Listener for the settings modal close button */
-        let modal = document.getElementById('settingsModal');
-        let modalIcon = document.getElementById('settings-icon');
-        let closeButton = modal.getElementsByClassName('close')[0];
-        closeButton.onclick = function () {
-            modal.style.display = 'none';
-            modalIcon.style.display = 'block';
-        }
-
-        /* Dark Mode functionality */
-        function toggleDarkMode() {
-            const body = document.body;
-            body.classList.toggle('light-mode');
-        }
-
-        function changeLanguage(lang) {
-            let expiryDate = new Date();
-            expiryDate.setFullYear(expiryDate.getFullYear() + 10); // Set the expiration to 10 years from now
-            document.cookie = "lang=" + lang + ";expires=" + expiryDate.toUTCString() + ";path=/";
-            location.reload();
-        }
-
-        // Call the function when page loads
-        window.onload = function () {
-            restoreProgressAndTime();
-            restoreVolumeSetting();
-            restoreListenedToFiles();
-            updatePlayResumeButton();
-            restoreSpeedSetting();
-            updatePlayResumeButtonIcon();
-        };
-
-        window.onresize = function () {
-            updatePlayResumeButtonIcon();
-        };
     </script>
     </body>
     </html>
