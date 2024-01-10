@@ -1,18 +1,23 @@
 <?php
 
-if (!is_dir('.metadata')) {
-    mkdir('.metadata');
-
-    initMetaDataFolder();
-    initPageJson();
-}
-
 $settings = [
     'lang'      => 'en',
     'languages' => ['en' => 'English', 'sk' => "Slovenčina"],
     'title'     => 'BookPlayer',
     'subtitle'  => 'by <a href="https://v2.sk/" target="_blank" title="Version Two - versiontwo.sk - Websites, mobile apps, custom systems ...">v2.sk</a>',
 ];
+
+//*  DO NOT EDIT BEYOND THIS POINT  *//
+
+if (!is_dir('.metadata')) {
+    mkdir('.metadata');
+
+    initMetaDataFolder();
+    initPageJson();
+}
+if (!is_dir('.metadata/lang')) {
+    mkdir('.metadata/lang');
+}
 
 if (file_exists('.metadata/page.json')) {
     $settings = array_merge($settings, json_decode(file_get_contents('.metadata/page.json'), true));
@@ -128,6 +133,7 @@ $fileCount = count($files);
                 margin-bottom    : 15px;
                 transition       : all 0.3s ease;
                 min-width        : 600px;
+                box-sizing       : border-box;
             }
 
             .mp3-item:hover {
@@ -178,6 +184,10 @@ $fileCount = count($files);
                 width            : 0;
             }
 
+            #playResumeButton {
+                margin-bottom : 30px;
+            }
+
             @media (max-width : 600px) {
                 .main-container {
                     display : block;
@@ -224,6 +234,9 @@ $fileCount = count($files);
                     align-items     : center;
                     justify-content : center;
                     padding         : 0;
+                    z-index         : 10;
+                    margin-bottom   : 0;
+                    box-shadow      : 0 3px 6px rgba(0, 0, 0, 0.16);
                 }
 
                 #playResumeButton span {
@@ -267,7 +280,7 @@ $fileCount = count($files);
             .settings-icon {
                 position : absolute;
                 top      : 15px;
-                right    : 15px;
+                right    : 30px;
                 width    : 50px;
                 height   : 50px;
                 cursor   : pointer;
@@ -482,7 +495,7 @@ $fileCount = count($files);
             </div>
             <br>
             <div class="language-selection">
-                <label for="languageSelect"><?= $translationLines['language_title']; ?>:</label>
+                <label for="languageSelect"><?= $translationLines['language_title']; ?></label>
                 <select id="languageSelect" onchange="audioPlayer.changeLanguage(this.value)">
                     <?php
                     foreach ($settings['languages'] as $newLang => $newLangTitle) {
@@ -733,8 +746,7 @@ $fileCount = count($files);
                         });
                     }
                 } else {
-                    audioElement.pause();
-                    playButton.textContent = '<?= $translationLines['play'];?>';
+                    this.stopAudio(hash);
                     if (this.timeUpdateInterval) clearInterval(this.timeUpdateInterval);
                 }
 
@@ -795,20 +807,27 @@ $fileCount = count($files);
                 const button = document.getElementById('playResumeButton');
                 const buttonTextSpan = document.getElementById('playResumeText');
                 let buttonText = '<?= $translationLines['play_resume_button_text_beginning']; ?>';
-
+                console.log('1');
                 if (lastPlayedHash) {
                     const lastAudioElement = document.getElementById('audio-' + lastPlayedHash);
                     if (lastAudioElement) {
+                        console.log('2');
                         if (!lastAudioElement.paused && !lastAudioElement.ended) {
                             // If currently playing
                             buttonText = '<?= $translationLines['pause']; ?>';
+                            console.log('3');
                         } else if (lastAudioElement.paused && lastAudioElement.currentTime > 0 && !lastAudioElement.ended) {
                             // If paused, has progress, and not ended
                             buttonText = '<?= $translationLines['resume_playback_button_text']; ?>';
+                            console.log('4');
+                        } else {
+                            buttonText = '<?= $translationLines['resume_playback_button_text']; ?>';
+                            console.log('5');
                         }
                     } else {
                         // If lastPlayedHash exists but corresponding audio element not found
                         buttonText = '<?= $translationLines['play_resume_button_text_beginning']; ?>';
+                        console.log('6');
                     }
                 }
 
@@ -918,7 +937,6 @@ $fileCount = count($files);
                     }
                 }
             }
-
 
             openModal() {
                 document.getElementById('settingsModal').style.display = 'flex';
