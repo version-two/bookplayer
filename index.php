@@ -1073,19 +1073,18 @@ function checkForUpdate($settings)
             file_get_contents("https://raw.githubusercontent.com/version-two/bookplayer/main/index.php", false, $context);
 
         if ($githubFileContent === false) {
-            echo "Error fetching file from GitHub.";
+            //echo "Error fetching file from GitHub.";
         } else {
             $localFileContent = file_get_contents(__FILE__);
 
             if ($localFileContent === false) {
-                echo "Error reading local file.";
+                //echo "Error reading local file.";
             } elseif ($githubFileContent !== $localFileContent) {
                 // Update the file
                 file_put_contents(__FILE__, $githubFileContent);
-                echo "Update completed. Please reload the page.";
+                //echo "Update completed. Please reload the page.";
+                header("Refresh:0");
                 exit;
-            } else {
-                echo "You are using the latest version.";
             }
         }
 
