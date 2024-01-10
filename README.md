@@ -29,6 +29,12 @@ listening experience.
 3. **MP3 files:**
    Drop some .mp3 files in the same directory and access the script.
 
+## Demo
+
+A live demonstration of the BookPlayer application is available at `https://showcase.v2.sk/bookplayer/`. Visit this link
+to see it in action and understand how it functions. Please note that the actual performance might vary depending on the
+server environment and the size and number of MP3 files being managed.
+
 ## Customization
 
 ### Editing `page.json` for Default Settings
@@ -42,8 +48,8 @@ listening experience.
 ### Editing Metadata Files for MP3 Files
 
 - **Custom Titles and Descriptions:**
-  Each MP3 file can have a metadata file `[filename].json` in `.metadata`. 
-  These files are generated automatically on page-load. 
+  Each MP3 file can have a metadata file `[filename].json` in `.metadata`.
+  These files are generated automatically on page-load.
   Edit these files to set custom titles and descriptions (HTML supported) for each MP3.
   ```json
   {
@@ -71,7 +77,8 @@ listening experience.
 - **Adding MP3 Files:**
   Place MP3 files in the same directory as the script.
 - **Playing Audio:**
-  Click the 'Play' button next to an audio file or global 'Play / Resume'  button to start / resume playback. Your progress on each file is saved to LocalStorage 
+  Click the 'Play' button next to an audio file or global 'Play / Resume' button to start / resume playback. Your
+  progress on each file is saved to LocalStorage
 - **Adjusting Volume and Speed:**
   Use the sliders in the settings modal. This setting is stored in LocalStorage.
 - **Language Selection:**
@@ -80,6 +87,18 @@ listening experience.
   Playback progress is saved automatically.
 - **Marking Files as Listened:**
   Mark files using the listened/not listened buttons. This data is stored in LocalStorage.
+
+## Auto-Update
+BookPlayer is now equipped with a feature to automatically check for updates and update itself. This is facilitated by a built-in auto-update function, `checkForUpdate()`, designed to run once per hour.
+
+This function works in the following way:
+- It retrieves the current PHP script from GitHub and compares it with the existing `index.php` on your local system.
+- If differences are observed between the local and fetched versions of the script, the local file is automatically updated using the script received from GitHub.
+- The update process automatically refreshes the page once completed.
+
+To disable auto-update, make sure the `auto_update` field in your `.metadata/page.json` is set to `false`.
+
+Please note that the function is set to trigger only when the duration between the last check and the current time exceeds an hour.
 
 ## Contributing
 
