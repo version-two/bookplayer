@@ -74,11 +74,6 @@ $fileCount = count($files);
                 overflow         : hidden;
             }
 
-            body.light-mode {
-                background-color : #ffffff !important;
-                color            : #121212 !important;
-            }
-
             .main-container {
                 display        : flex;
                 flex-direction : column;
@@ -108,14 +103,6 @@ $fileCount = count($files);
                 font-weight   : 300;
             }
 
-            .light-mode .page-title {
-                color : #121212;
-            }
-
-            .light-mode .page-subtitle {
-                color : #121212;
-            }
-
             .mp3-container {
                 /*width            : 95%;*/
                 max-width        : min(600px, 100vw);
@@ -143,10 +130,6 @@ $fileCount = count($files);
             .mp3-title {
                 margin-bottom : 5px;
                 max-width     : 90%;
-            }
-
-            .light-mode .mp3-title {
-                color : white;
             }
 
             .mp3-controls {
@@ -302,10 +285,6 @@ $fileCount = count($files);
                 z-index          : 1;
             }
 
-            body.light-mode .settings-modal {
-                background-color : rgba(0, 0, 0, 0.4);
-            }
-
             /* Modal Content */
             body .settings-modal-content {
                 background-color : #2c2c2c;
@@ -317,11 +296,6 @@ $fileCount = count($files);
                 max-width        : 500px;
                 padding          : 40px;
                 text-align       : center;
-            }
-
-            body.light-mode .settings-modal-content {
-                background-color : #f4f4f4;
-                color            : #121212;
             }
 
             /* The Close Button */
