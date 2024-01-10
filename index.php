@@ -1,12 +1,24 @@
 <?php
-$jsonData = [
-    'lang'     => 'sk',
-    'title'    => 'Book player',
-    'subtitle' => null,
-];
-if (file_exists('metadata/page.json')) {
-    $jsonData = json_decode(file_get_contents('metadata/page.json'), true);
+
+if (!is_dir('.metadata')) {
+    mkdir('.metadata');
+
+    initMetaDataFolder();
+    initPageJson();
 }
+
+$jsonData = [
+    'lang'     => 'en',
+    'title'    => 'BookPlayer',
+    'subtitle' => 'by <a href="https://v2.sk/" target="_blank" title="Version Two - versiontwo.sk - Websites, mobile apps, custom systems ...">v2.sk</a>',
+];
+if (file_exists('.metadata/page.json')) {
+    $jsonData = json_decode(file_get_contents('.metadata/page.json'), true);
+}
+
+$files = glob("*.mp3");
+natsort($files);
+$fileCount = count($files);
 ?>
     <!DOCTYPE html>
     <html lang="<?= $jsonData['lang'] ?>">
@@ -38,6 +50,8 @@ if (file_exists('metadata/page.json')) {
                 height           : 100vh;
                 transition       : all 0.5s ease;
                 max-width        : 100vw;
+                max-height       : 100vh;
+                overflow         : hidden;
             }
 
             body.light-mode {
@@ -46,11 +60,16 @@ if (file_exists('metadata/page.json')) {
             }
 
             .main-container {
-                display         : flex;
-                flex-direction  : column;
+                display        : flex;
+                flex-direction : column;
+                align-items    : center;
+                height         : 100%;
+                overflow       : auto;
+                padding        : 20px;
+            }
+
+            .center-content {
                 justify-content : center;
-                align-items     : center;
-                height          : 100%;
             }
 
             .page-title {
@@ -138,6 +157,7 @@ if (file_exists('metadata/page.json')) {
             }
 
             .progress-bar-inner {
+                transition       : all 200ms ease-in;
                 height           : 10px;
                 background-color : #007bff;
                 width            : 0;
@@ -230,6 +250,7 @@ if (file_exists('metadata/page.json')) {
                 display          : flex;
                 align-items      : center;
                 justify-content  : center;
+                z-index          : 1;
             }
 
             body.light-mode .settings-modal {
@@ -372,6 +393,35 @@ if (file_exists('metadata/page.json')) {
             .mp3-item .mark-not-listened:hover {
                 opacity : 1;
             }
+
+            .speed-control-container {
+                display         : flex;
+                align-items     : center;
+                justify-content : space-between;
+                margin-bottom   : 10px;
+            }
+
+            .speed-control-container label {
+                margin-right : 10px;
+            }
+
+            .slider-and-button {
+                display         : flex;
+                align-items     : center;
+                justify-content : space-between;
+                width           : 100%;
+            }
+
+            #speedSlider {
+                flex-grow    : 1;
+                margin-right : 5%;
+            }
+
+            #resetSpeedButton {
+                width     : 25%;
+                padding   : 5px;
+                font-size : 0.8em;
+            }
         </style>
     </head>
     <body>
@@ -384,6 +434,14 @@ if (file_exists('metadata/page.json')) {
 
             <label for="volumeControl">Volume control:</label>
             <input type="range" min="0" max="100" value="100" class="slider" id="volumeControl">
+            <br>
+            <label for="speedSlider">Speed: </label>
+            <div class="speed-control-container">
+                <div class="slider-and-button">
+                    <input type="range" id="speedSlider" min="0.25" max="2" step="0.05" value="1" style="width: 70%;">
+                    <button id="resetSpeedButton" style="width: 25%;">Reset</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -403,7 +461,7 @@ if (file_exists('metadata/page.json')) {
     </svg>
 
 
-    <div class="main-container">
+    <div class="main-container <?= $fileCount > 4 ? '' : 'center-content' ?>">
         <?php if (isset($jsonData['title'])): ?>
             <h1 class="page-title"><?= $jsonData['title'] ?></h1>
         <?php endif; ?>
@@ -428,13 +486,20 @@ if (file_exists('metadata/page.json')) {
                 return md5_file($filename);
             }
 
+            function initPageJson()
+            {
+                file_put_contents('.metadata' . DIRECTORY_SEPARATOR . 'page.json', '{"lang": "en","title": "BookPlayer","subtitle": "by <a href=\"https://v2.sk/\" target="_blank" title="Version Two - versiontwo.sk - Websites, mobile apps, custom systems ...">v2.sk</a>"}');
+            }
+
+            function initMetaDataFolder()
+            {
+                file_put_contents('.metadata' . DIRECTORY_SEPARATOR . '.htaccess', 'Options -MultiViews -Indexes');
+            }
+
             function getMP3Details($filename)
             {
-                if (!is_dir('metadata')) {
-                    mkdir('metadata');
-                }
                 $hash         = getMD5Hash($filename);
-                $jsonFilename = 'metadata/' . pathinfo($filename, PATHINFO_FILENAME) . '.json';
+                $jsonFilename = '.metadata/' . pathinfo($filename, PATHINFO_FILENAME) . '.json';
                 $fileSize     = filesize($filename);
 
                 if (file_exists($jsonFilename)) {
@@ -477,8 +542,6 @@ if (file_exists('metadata/page.json')) {
                 return $newJsonData;
             }
 
-            $files = glob("*.mp3");
-            natsort($files);
             foreach ($files as $file) {
                 $encodedFile  = rawurlencode($file);
                 $fileJsonData = getMP3Details($file); // Get details including duration
@@ -503,7 +566,7 @@ if (file_exists('metadata/page.json')) {
                 }
                 echo '</div>';
                 echo '<div class="mp3-controls">';
-                echo '<button class="play-button" onclick="playAudio(\'' . $hash . '\')">Play</button>';
+                echo '<button id="play-' . $hash . '" class="play-button" onclick="playAudio(\'' . $hash . '\')">Play</button>';
                 echo '<div class="progress-bar" onclick="seekAudio(event, \'' . $hash . '\')"><div class="progress-bar-inner"></div></div>';
                 echo '<div class="time-info">00:00 / ' . $formattedDuration . '</div>'; // Use the formatted duration here
                 echo '</div>';
@@ -519,6 +582,7 @@ if (file_exists('metadata/page.json')) {
     </div>
 
     <script>
+        let currentSpeed = 1;
         let currentAudio = null;
         let currentButton = null;
 
@@ -542,19 +606,11 @@ if (file_exists('metadata/page.json')) {
             let itemElement = document.getElementById('item-' + hash);
             let encodedFilename = itemElement.dataset.filename;
             let audioElement = document.getElementById('audio-' + hash);
-            let playButton = itemElement.querySelector('button.play-button');
+            let playButton = document.getElementById('play-' + hash);
 
             // Error handling for missing elements
-            if (!itemElement) {
-                console.error('Item element not found for:', encodedFilename);
-                return;
-            }
-            if (!audioElement) {
-                console.error('Audio element not found for:', encodedFilename);
-                return;
-            }
-            if (!playButton) {
-                console.error('Play button not found for:', encodedFilename);
+            if (!itemElement || !audioElement || !playButton) {
+                console.error('Required elements not found for:', encodedFilename);
                 return;
             }
 
@@ -563,6 +619,7 @@ if (file_exists('metadata/page.json')) {
                 audioElement.src = decodeURIComponent(encodedFilename);
             }
 
+            // Update localStorage and button
             localStorage.setItem('lastPlayed', hash);
             updatePlayResumeButton();
 
@@ -576,62 +633,48 @@ if (file_exists('metadata/page.json')) {
 
             // Pause all other tracks
             const audioElements = document.querySelectorAll('audio');
-            for (let otherAudio of audioElements) {
+            audioElements.forEach(otherAudio => {
                 if (otherAudio !== audioElement) {
                     otherAudio.pause();
-                    // Also reset the play button text of other tracks, if necessary
-                    let otherButton = otherAudio.parentElement.querySelector('button');
-                    if (otherButton) {
-                        otherButton.textContent = 'Play';
-                    }
+                    let otherButton = otherAudio.parentElement.querySelector('button.play-button');
+                    if (otherButton) otherButton.textContent = 'Play';
                 }
-            }
-
-            audioElement.addEventListener('ended', function () {
-                // Mark the current track as listened to
-                markAsListened(hash);
-
-                // Automatically start playing the next track
-                playNextTrack(hash);
             });
 
-            // Add listener for 'canplaythrough' event
-            audioElement.addEventListener('canplaythrough', function () {
-                updateTimeInfo(hash);
-                updateProgress(hash);
-            }, false);
-
-            // Check if there's currentAudio and it's not the current audioElement
-            if (currentAudio && currentAudio !== audioElement) {
-                currentAudio.pause();
-                if (currentButton) {
-                    currentButton.textContent = 'Play';
-                }
-            }
-
-            // Check if audio is paused and play or pause accordingly
+            // Handle play/pause logic
             if (audioElement.paused) {
-                audioElement.play();
-                playButton.textContent = 'Stop';
-                // Clear any existing intervals
-                if (window.timeUpdateInterval) clearInterval(window.timeUpdateInterval);
-                // Set a new interval to update the time and save current time to localStorage
-                window.timeUpdateInterval = setInterval(function () {
-                    updateTimeInfo(hash);
-                    updateProgress(hash);
-                    localStorage.setItem(hash + '-time', audioElement.currentTime);
-                    localStorage.setItem(hash + '-progress', (audioElement.currentTime / audioElement.duration) * 100);
-                }, 1000);
+                const playPromise = audioElement.play();
+                audioElement.playbackRate = currentSpeed;
+
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        // Playback started successfully
+                        playButton.textContent = 'Stop';
+                        // Set a new interval to update the time
+                        window.timeUpdateInterval = setInterval(() => {
+                            updateTimeInfo(hash);
+                            updateProgress(hash);
+                            localStorage.setItem(hash + '-time', audioElement.currentTime);
+                            localStorage.setItem(hash + '-progress', (audioElement.currentTime / audioElement.duration) * 100);
+                        }, 1000);
+                    }).catch(error => {
+                        console.error('Error attempting to play audio:', error);
+                    });
+                }
             } else {
                 audioElement.pause();
                 playButton.textContent = 'Play';
-                // Clear the interval when audio is paused
                 if (window.timeUpdateInterval) clearInterval(window.timeUpdateInterval);
             }
+        }
 
-            // Update the currentAudio and currentButton
-            currentAudio = audioElement;
-            currentButton = playButton;
+        function playFirstTrack() {
+            const firstItemHash = document.querySelector('.mp3-item')?.id.replace('item-', '');
+            if (firstItemHash) {
+                playAudio(firstItemHash);
+            } else {
+                console.error("No MP3 items found on the page");
+            }
         }
 
         function playNextTrack(currentHash) {
@@ -647,28 +690,49 @@ if (file_exists('metadata/page.json')) {
         function playOrResume() {
             const lastPlayedHash = localStorage.getItem('lastPlayed');
             if (lastPlayedHash) {
-                playAudio(lastPlayedHash);
+                const lastAudioElement = document.getElementById('audio-' + lastPlayedHash);
+                if (lastAudioElement) {
+                    if (lastAudioElement.paused) {
+                        playAudio(lastPlayedHash);
+                        updatePlayResumeButton();
+                    } else {
+                        lastAudioElement.pause();
+                        updatePlayResumeButton(); // Update the button immediately
+                    }
+                } else {
+                    playFirstTrack();
+                }
             } else {
-                // Find the first MP3 item and play it
-                const firstItemHash = document.querySelector('.mp3-item').id.replace('item-', '');
-                playAudio(firstItemHash);
+                playFirstTrack();
             }
         }
 
         function updatePlayResumeButton() {
-            const lastPlayedHash = localStorage.getItem('lastPlayed');
             const button = document.getElementById('playResumeButton');
-            if (lastPlayedHash) {
-                const lastAudioElement = document.getElementById('audio-' + lastPlayedHash);
-                // if (lastAudioElement && !lastAudioElement.paused) {
-                //     button.textContent = 'Resume';
-                // } else {
-                //     button.textContent = 'Play from beginning';
-                // }
-                button.textContent = 'Resume';
+            const lastPlayedHash = localStorage.getItem('lastPlayed');
+            let buttonText = 'Play from beginning';
+            if (!lastPlayedHash) {
+                // If no track has been played yet
+                buttonText = 'Play from beginning';
             } else {
-                button.textContent = 'Play from beginning';
+                const lastAudioElement = document.getElementById('audio-' + lastPlayedHash);
+                if (lastAudioElement) {
+                    buttonText = 'Resume playback';
+                    if (!lastAudioElement.paused && !lastAudioElement.ended) {
+                        // If currently playing
+                        buttonText = 'Pause';
+                    } else if (lastAudioElement.paused && lastAudioElement.currentTime > 0 && !lastAudioElement.ended) {
+                        // If paused, has progress, and not ended
+                        buttonText = 'Resume playback';
+                    }
+                } else {
+                    // If lastPlayedHash exists but corresponding audio element not found
+                    buttonText = 'Play from beginning';
+                }
             }
+
+            button.textContent = buttonText;
+
             // Disable the button if there are no MP3 files
             button.disabled = document.querySelectorAll('.mp3-item').length === 0;
         }
@@ -697,6 +761,16 @@ if (file_exists('metadata/page.json')) {
                 let percentage = (Math.floor(audioElement.currentTime) / Math.floor(audioElement.duration)) * 100;
                 progress.style.width = percentage + '%';
             }
+        }
+
+        function updateAudioSpeed(speed) {
+            speed = parseFloat(speed);
+            currentSpeed = speed;
+            console.log('Updating speed to:' + speed.toString());
+            const audioElements = document.querySelectorAll('audio');
+            audioElements.forEach(audio => {
+                audio.playbackRate = speed;
+            });
         }
 
         function seekAudio(event, hash) {
@@ -765,6 +839,20 @@ if (file_exists('metadata/page.json')) {
             localStorage.setItem('globalVolume', globalVolume);
         });
 
+        // Event listener for speed slider
+        document.getElementById('speedSlider').addEventListener('input', function () {
+            const selectedSpeed = parseFloat(this.value);
+            updateAudioSpeed(selectedSpeed);
+            localStorage.setItem('globalPlaybackSpeed', selectedSpeed.toString());
+        });
+
+        // Event listener for reset speed button
+        document.getElementById('resetSpeedButton').addEventListener('click', function () {
+            updateAudioSpeed(1);
+            document.getElementById('speedSlider').value = 1;
+            localStorage.setItem('globalPlaybackSpeed', 1);
+        });
+
         function restoreVolumeSetting() {
             // Check if a saved volume setting exists in localStorage
             if (localStorage.getItem('globalVolume')) {
@@ -788,6 +876,13 @@ if (file_exists('metadata/page.json')) {
                     markAsListened(hash);
                 }
             }
+        }
+
+        // Function to restore the speed setting from localStorage
+        function restoreSpeedSetting() {
+            const savedSpeed = parseFloat(localStorage.getItem('globalPlaybackSpeed')) || 1;
+            updateAudioSpeed(savedSpeed);
+            document.getElementById('speedSlider').value = savedSpeed;
         }
 
         function markAsListened(hash) {
@@ -836,6 +931,7 @@ if (file_exists('metadata/page.json')) {
             restoreVolumeSetting();
             restoreListenedToFiles();
             updatePlayResumeButton();
+            restoreSpeedSetting();
         };
     </script>
     </body>
