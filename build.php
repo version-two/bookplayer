@@ -35,9 +35,9 @@ if ($minify) {
 
 $fileContents = str_replace('{version}', $versionTag, $fileContents);
 // Writing to /dist/index.php
-$result = file_put_contents('./dist/index.php', $fileContents);
+$result = file_put_contents('index.php', $fileContents);
 if ($result === false) {
-    die('Failed to write file: ./dist/index.php');
+    die('Failed to write file: index.php');
 }
 
 echo "Operation completed successfully!\n";
