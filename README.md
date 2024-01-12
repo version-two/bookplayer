@@ -21,7 +21,7 @@ listening experience.
 ## Installation
 
 1. **Download index.php:**
-   Just download the `index.php` file.
+   Just download the latest [index.php](https://github.com/version-two/bookplayer/releases/latest/download/index.php) file from the releases.
 
 2. **Directory Setup:**
    Place the script in a PHP-supported server environment.
@@ -87,6 +87,12 @@ server environment and the size and number of MP3 files being managed.
   Playback progress is saved automatically.
 - **Marking Files as Listened:**
   Mark files using the listened/not listened buttons. This data is stored in LocalStorage.
+
+## Books Listing
+
+The script function scans through directories and subdirectories of a given base directory. It looks for a metadata file for each book directory, gathering details into a 'book' list including the title, path, and possibly subdirectories for each book. Each directory with a `.metadata/page.json` file is treated as a separate 'book'.
+
+On the page, these books are displayed before the container with audio files div. If there are subdirectories within a book directory, each is treated as a separate book item and displayed in a list under the parent book.
 
 ## Auto-Update
 BookPlayer is now equipped with a feature to automatically check for updates and update itself. This is facilitated by a built-in auto-update function, `checkForUpdate()`, designed to run once per hour.
