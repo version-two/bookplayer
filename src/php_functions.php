@@ -9,7 +9,7 @@ function checkForUpdate($settings)
     if ($settings['auto_update'] && $currentTime - $lastCheck > 3600) {
         $context           = stream_context_create(['http' => ['header' => 'User-Agent: PHP']]);
         $githubFileContent =
-            file_get_contents("https://raw.githubusercontent.com/version-two/bookplayer/main/index.php", false, $context);
+            file_get_contents("https://github.com/version-two/bookplayer/releases/latest/download/index.php", false, $context);
 
         if ($githubFileContent === false) {
             //echo "Error fetching file from GitHub.";

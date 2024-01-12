@@ -15,7 +15,7 @@ jobs:
           php-version: '8.0' # Set the PHP version required for your project
 
       - name: Build project
-        run: php build.php ${{ github.ref_name }}
+        run: php build.php --version ${{ github.ref_name }}
         # This assumes build.php will concatenate the files and update index.php
 
       - name: Create Release
