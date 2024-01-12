@@ -1,0 +1,26 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # This will trigger the workflow for any tag like v1.0, v1.0.1 etc.
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0' # Set the PHP version required for your project
+
+      - name: Build project
+        run: php build.php ${{ github.ref_name }}
+        # This assumes build.php will concatenate the files and update index.php
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: index.php
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
